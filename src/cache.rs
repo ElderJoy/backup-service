@@ -30,6 +30,7 @@ impl CacheLayer {
     }
 
     /// Create a no-op cache (for testing or when Redis is unavailable).
+    #[allow(dead_code)]
     pub fn noop() -> Self {
         Self { redis: None }
     }

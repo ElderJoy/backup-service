@@ -1,22 +1,13 @@
-mod cache;
-mod config;
-mod db;
-mod errors;
-mod ffi;
-mod handlers;
-mod middleware;
-mod models;
-mod router;
-mod state;
-
 use std::sync::Arc;
 
 use tokio::signal;
 use tracing_subscriber::EnvFilter;
 
-use crate::cache::CacheLayer;
-use crate::config::AppConfig;
-use crate::state::AppState;
+use backup_service::cache::CacheLayer;
+use backup_service::config::AppConfig;
+use backup_service::db;
+use backup_service::router;
+use backup_service::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

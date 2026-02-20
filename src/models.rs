@@ -6,10 +6,12 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(transparent)]
+#[allow(dead_code)]
 pub struct TenantId(pub Uuid);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(transparent)]
+#[allow(dead_code)]
 pub struct BackupId(pub Uuid);
 
 // -- Backup status enum --

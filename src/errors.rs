@@ -11,12 +11,14 @@ pub enum AppError {
     Unauthorized(String),
 
     #[error("forbidden: {0}")]
+    #[allow(dead_code)]
     Forbidden(String),
 
     #[error("validation error: {0}")]
     Validation(String),
 
     #[error("conflict: {0}")]
+    #[allow(dead_code)]
     Conflict(String),
 
     #[error("database error: {0}")]

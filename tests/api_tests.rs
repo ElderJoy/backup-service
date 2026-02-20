@@ -5,6 +5,7 @@
 //!
 //! Run with: `cargo test -- --test-threads=1`
 
+use axum::http::header::{HeaderName, HeaderValue};
 use axum::http::StatusCode;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -51,6 +52,15 @@ fn get_test_token() -> String {
     .unwrap()
 }
 
+/// Parsed Authorization header (name + value) for test requests. Build once, reuse.
+fn auth_headers() -> (HeaderName, HeaderValue) {
+    let value = format!("Bearer {}", get_test_token());
+    (
+        "Authorization".parse::<HeaderName>().unwrap(),
+        value.parse::<HeaderValue>().unwrap(),
+    )
+}
+
 #[tokio::test]
 async fn health_check_returns_ok() {
     let Some(server) = setup().await else {
@@ -83,13 +93,12 @@ async fn backup_crud_lifecycle() {
         return;
     };
 
-    let token = get_test_token();
-    let auth_header = format!("Bearer {token}");
+    let (auth_name, auth_value) = auth_headers();
 
     // CREATE
     let resp = server
         .post("/api/v1/backups")
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .json(&json!({
             "source_path": "/data/test-integration",
             "encryption_enabled": true
@@ -106,7 +115,7 @@ async fn backup_crud_lifecycle() {
     // GET
     let resp = server
         .get(&format!("/api/v1/backups/{backup_id}"))
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .await;
 
     resp.assert_status(StatusCode::OK);
@@ -116,7 +125,7 @@ async fn backup_crud_lifecycle() {
     // LIST
     let resp = server
         .get("/api/v1/backups")
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .await;
 
     resp.assert_status(StatusCode::OK);
@@ -126,7 +135,7 @@ async fn backup_crud_lifecycle() {
     // UPDATE
     let resp = server
         .patch(&format!("/api/v1/backups/{backup_id}"))
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .json(&json!({ "status": "completed", "size_bytes": 1024 }))
         .await;
 
@@ -138,7 +147,7 @@ async fn backup_crud_lifecycle() {
     // ANALYZE (FFI entropy)
     let resp = server
         .post(&format!("/api/v1/backups/{backup_id}/analyze"))
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .await;
 
     resp.assert_status(StatusCode::OK);
@@ -148,7 +157,7 @@ async fn backup_crud_lifecycle() {
     // DELETE
     let resp = server
         .delete(&format!("/api/v1/backups/{backup_id}"))
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .await;
 
     resp.assert_status(StatusCode::NO_CONTENT);
@@ -156,7 +165,7 @@ async fn backup_crud_lifecycle() {
     // Verify deleted
     let resp = server
         .get(&format!("/api/v1/backups/{backup_id}"))
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .await;
 
     resp.assert_status(StatusCode::NOT_FOUND);
@@ -169,13 +178,12 @@ async fn validation_rejects_bad_paths() {
         return;
     };
 
-    let token = get_test_token();
-    let auth_header = format!("Bearer {token}");
+    let (auth_name, auth_value) = auth_headers();
 
     // Empty path
     let resp = server
         .post("/api/v1/backups")
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .json(&json!({ "source_path": "" }))
         .await;
     resp.assert_status(StatusCode::BAD_REQUEST);
@@ -183,7 +191,7 @@ async fn validation_rejects_bad_paths() {
     // Relative path
     let resp = server
         .post("/api/v1/backups")
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .json(&json!({ "source_path": "relative/path" }))
         .await;
     resp.assert_status(StatusCode::BAD_REQUEST);
@@ -191,7 +199,7 @@ async fn validation_rejects_bad_paths() {
     // Path traversal
     let resp = server
         .post("/api/v1/backups")
-        .add_header("Authorization".parse().unwrap(), auth_header.parse().unwrap())
+        .add_header(auth_name.clone(), auth_value.clone())
         .json(&json!({ "source_path": "/home/../etc/passwd" }))
         .await;
     resp.assert_status(StatusCode::BAD_REQUEST);
