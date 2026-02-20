@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://backup:backup@db:5432/backup_service
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-compose-secret-change-in-prod
+      RUST_LOG: backup_service=debug,tower_http=debug
+      LISTEN_ADDR: 0.0.0.0:8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: backup
+      POSTGRES_PASSWORD: backup
+      POSTGRES_DB: backup_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backup"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
