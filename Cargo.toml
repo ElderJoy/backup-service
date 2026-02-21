@@ -5,11 +5,23 @@ edition = "2024"
 description = "Backup service prototype demonstrating Rust backend patterns"
 build = "build.rs"
 
+[[bin]]
+name = "backup-service"
+path = "src/main.rs"
+
+[[bin]]
+name = "backup-worker"
+path = "src/bin/backup-worker.rs"
+
 [dependencies]
 # Web framework
 axum = { version = "0.8", features = ["macros"] }
 tower-http = { version = "0.6", features = ["cors", "trace", "timeout", "compression-gzip", "limit"] }
 tower = { version = "0.5", features = ["limit", "load-shed", "buffer"] }
+
+# gRPC
+tonic = "0.12"
+prost = "0.13"
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -61,6 +73,7 @@ libc = "0.2"
 
 [build-dependencies]
 cc = "1"
+tonic-build = "0.12"
 
 [dev-dependencies]
 axum-test = "18"

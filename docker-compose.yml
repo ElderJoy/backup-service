@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "8080:8080"
+      - "50051:50051"
     environment:
       DATABASE_URL: postgres://backup:backup@db:5432/backup_service
       REDIS_URL: redis://redis:6379
@@ -10,6 +11,7 @@ services:
       JWT_SECRET: docker-compose-secret-change-in-prod
       RUST_LOG: backup_service=debug,tower_http=debug
       LISTEN_ADDR: 0.0.0.0:8080
+      GRPC_LISTEN_ADDR: 0.0.0.0:50051
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       RATE_LIMIT_MAX_REQUESTS: "100"
       RATE_LIMIT_WINDOW_SECS: "60"
@@ -17,6 +19,20 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    build: .
+    entrypoint: ["backup-worker"]
+    environment:
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/%2f
+      GRPC_TARGET: http://app:50051
+      RUST_LOG: backup_worker=debug
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      app:
         condition: service_started
       rabbitmq:
         condition: service_healthy

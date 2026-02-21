@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub amqp_url: String,
     pub jwt_secret: String,
     pub listen_addr: SocketAddr,
+    pub grpc_addr: SocketAddr,
     pub rate_limit: RateLimitConfig,
 }
 
@@ -25,6 +26,9 @@ impl AppConfig {
                 .unwrap_or_else(|_| "dev-secret-do-not-use-in-prod".into()),
             listen_addr: std::env::var("LISTEN_ADDR")
                 .unwrap_or_else(|_| "0.0.0.0:8080".into())
+                .parse()?,
+            grpc_addr: std::env::var("GRPC_LISTEN_ADDR")
+                .unwrap_or_else(|_| "0.0.0.0:50051".into())
                 .parse()?,
             rate_limit: RateLimitConfig {
                 max_requests: std::env::var("RATE_LIMIT_MAX_REQUESTS")

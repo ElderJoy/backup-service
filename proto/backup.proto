@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package backup;
+
+// Service exposed by backup-service (API) for the worker to report results.
+service BackupProcessor {
+  // Called by worker when it starts processing a job.
+  rpc UpdateStatus(StatusUpdate) returns (Ack);
+
+  // Called by worker when processing is complete (success or failure).
+  rpc ReportResult(ProcessingResult) returns (Ack);
+}
+
+message StatusUpdate {
+  string backup_id = 1;
+  string status = 2; // "running" or "failed"
+}
+
+message ProcessingResult {
+  string backup_id = 1;
+  string status = 2; // "completed" or "failed"
+  int64 size_bytes = 3;
+  double entropy = 4;
+  bool suspicious = 5;
+  string error_message = 6; // non-empty on failure
+}
+
+message Ack {
+  bool success = 1;
+  string message = 2;
+}

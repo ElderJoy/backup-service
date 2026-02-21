@@ -36,6 +36,9 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: backup-service-config
@@ -71,7 +74,8 @@ spec:
             failureThreshold: 30
             periodSeconds: 2
 ---
-# Worker deployment (consumes from RabbitMQ)
+# Worker deployment — separate binary consuming from RabbitMQ,
+# reporting results to backup-service via gRPC.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,10 +101,10 @@ spec:
       containers:
         - name: backup-worker
           image: backup-service:latest
-          args: ["--worker"]
+          command: ["backup-worker"]
           envFrom:
             - configMapRef:
-                name: backup-service-config
+                name: backup-worker-config
             - secretRef:
                 name: backup-service-secrets
           resources:

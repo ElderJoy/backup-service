@@ -16,10 +16,21 @@ metadata:
   namespace: backup-service
 data:
   LISTEN_ADDR: "0.0.0.0:8080"
+  GRPC_LISTEN_ADDR: "0.0.0.0:50051"
   RUST_LOG: "backup_service=info,tower_http=info,sqlx=warn"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector.observability:4317"
   RATE_LIMIT_MAX_REQUESTS: "100"
   RATE_LIMIT_WINDOW_SECS: "60"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-worker-config
+  namespace: backup-service
+data:
+  GRPC_TARGET: "http://backup-service:50051"
+  RUST_LOG: "backup_worker=info"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector.observability:4317"
 ---
 apiVersion: v1
 kind: Secret

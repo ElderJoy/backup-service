@@ -2,52 +2,77 @@
 
 Test project to learn main concepts, used for building robust backend service in Rust.
 
+## Architecture
+
+The system consists of two separate binaries communicating via message queue and gRPC:
+
+- **backup-service** — REST API server (Axum) + gRPC server (Tonic). Handles HTTP requests, publishes backup jobs to RabbitMQ, and receives processing results from the worker via gRPC.
+- **backup-worker** — Standalone worker binary. Consumes jobs from RabbitMQ, performs entropy analysis (C FFI), and reports results back to the API service via gRPC.
+
+```
+┌──────────────┐     RabbitMQ      ┌──────────────┐
+│ backup-      │ ── job queue ──>  │ backup-      │
+│ service      │                   │ worker       │
+│ (API + gRPC) │ <── gRPC ──────  │ (consumer +  │
+│              │    results        │  FFI)        │
+└──────┬───────┘                   └──────────────┘
+       │
+   PostgreSQL / Redis
+```
+
 ## Concepts Exercised
 
 | Guide Section | Implementation |
 |--------------|---------------|
 | **Rust Core** | Newtypes (`TenantId`, `BackupId`), enums (`BackupStatus`, `AppError`), traits (`FromRow`, `IntoResponse`), `Result`/`?` error propagation |
 | **HTTP & REST** | Axum framework: routing, extractors (`Path`, `Query`, `Json`, `State`, `Extension`), Tower middleware, CORS, compression, timeouts, request body limits |
+| **gRPC** | Tonic server/client, Protocol Buffers (`prost`), `tonic-build` code generation, inter-service communication |
 | **Auth** | JWT creation/verification with `jsonwebtoken`, auth middleware, claims extraction, role-based access |
 | **Databases** | SQLx with PostgreSQL: connection pooling, runtime queries, migrations, parameterized queries (SQL injection prevention) |
 | **TCP/IP** | TCP listener binding, graceful shutdown with signal handling |
 | **Concurrency** | `Arc` for shared state, `tokio::task::spawn_blocking` for CPU work, `tokio::sync::Mutex` for rate limiter, `watch` channel for shutdown coordination |
 | **Async Rust** | Tokio runtime, async handlers, graceful shutdown with `tokio::select!`, background worker with `tokio::spawn` |
-| **Testing** | Unit tests (`#[test]`), async integration tests (`#[tokio::test]`), input validation tests, rate limiter tests |
+| **Testing** | Unit tests (`#[test]`), async integration tests (`#[tokio::test]`), input validation tests, rate limiter tests, proto message tests |
 | **Redis** | Caching layer with TTL, cache invalidation on mutations, graceful degradation when Redis is down |
 | **RabbitMQ** | AMQP producer/consumer with `lapin`, durable exchanges/queues, message acknowledgement/rejection, dead-letter handling |
-| **Docker & K8s** | Multi-stage Dockerfile, docker-compose with PostgreSQL + Redis + RabbitMQ + Jaeger, Kubernetes manifests (Deployment, Service, Ingress, ConfigMap, Secret, HPA) |
+| **Docker & K8s** | Multi-stage Dockerfile (both binaries), docker-compose with all services, Kubernetes manifests (Deployment, Service, Ingress, ConfigMap, Secret, HPA) |
 | **Observability** | `tracing` structured logging, Prometheus metrics endpoint (`/metrics`), OpenTelemetry distributed tracing exported to Jaeger, health checks |
 | **FFI** | C entropy calculator called from Rust via `extern "C"`, compiled with `cc` crate in `build.rs` |
 | **Rate Limiting** | Per-tenant sliding window rate limiter with `X-RateLimit-*` response headers, configurable via environment |
+| **Binary Separation** | `[[bin]]` targets in Cargo.toml, shared library crate, independent deployment and scaling |
 | **Code Quality** | Input validation (path traversal prevention), proper error types with `thiserror`, newtype pattern, SAFETY comments on FFI |
 
 ## Project Structure
 
 ```
 backup-service/
-├── build.rs                    # Compiles C code for FFI
-├── Cargo.toml                  # Dependencies
-├── docker-compose.yml          # Local dev: app + Postgres + Redis + RabbitMQ + Jaeger
-├── Dockerfile                  # Multi-stage production build
+├── build.rs                    # Compiles C FFI code + protobuf definitions
+├── Cargo.toml                  # Dependencies, [[bin]] targets
+├── docker-compose.yml          # Local dev: API + worker + infra
+├── Dockerfile                  # Multi-stage build (both binaries)
+├── proto/
+│   └── backup.proto            # gRPC service definition (BackupProcessor)
 ├── k8s/                        # Kubernetes manifests
-│   ├── config.yaml             # Namespace, ServiceAccount, ConfigMap, Secret
+│   ├── config.yaml             # Namespace, ServiceAccount, ConfigMaps, Secret
 │   ├── deployment.yaml         # API server + Worker deployments
-│   ├── service.yaml            # ClusterIP Service + Ingress
-│   └── hpa.yaml                # HorizontalPodAutoscaler for API + Worker
+│   ├── service.yaml            # ClusterIP Service (HTTP + gRPC) + Ingress
+│   └── hpa.yaml                # HPA for API (3-20 pods) + Worker (2-10 pods)
 ├── migrations/
 │   └── 001_create_backups.sql  # Database schema
 ├── src/
-│   ├── main.rs                 # Entry point: runtime, worker spawn, signal handling
-│   ├── lib.rs                  # Public modules (for integration tests)
+│   ├── main.rs                 # backup-service: HTTP + gRPC server entry point
+│   ├── bin/
+│   │   └── backup-worker.rs    # backup-worker: RabbitMQ consumer + gRPC client
+│   ├── lib.rs                  # Public modules (shared library)
 │   ├── config.rs               # Environment-based configuration
 │   ├── state.rs                # Shared app state (Pool, Cache, RabbitMQ, RateLimiter)
 │   ├── router.rs               # Route definitions + middleware stack
+│   ├── grpc.rs                 # gRPC server (BackupProcessor service)
 │   ├── errors.rs               # AppError enum → HTTP responses (thiserror)
 │   ├── models.rs               # Domain types, newtypes, request/response DTOs
 │   ├── cache.rs                # Redis caching with graceful degradation
 │   ├── telemetry.rs            # OpenTelemetry + tracing-subscriber setup
-│   ├── worker.rs               # RabbitMQ background job consumer
+│   ├── worker.rs               # AMQP topology + job publishing
 │   ├── db/
 │   │   └── mod.rs              # Connection pool + migration runner
 │   ├── handlers/
@@ -76,7 +101,8 @@ docker-compose up --build
 ```
 
 This starts:
-- **backup-service** on `localhost:8080`
+- **backup-service** on `localhost:8080` (HTTP) + `localhost:50051` (gRPC)
+- **backup-worker** connected to RabbitMQ + API gRPC
 - **PostgreSQL 16** on `localhost:5432`
 - **Redis 7** on `localhost:6379`
 - **RabbitMQ 3** on `localhost:5672` (management UI at `localhost:15672`)
@@ -91,8 +117,11 @@ docker-compose up db redis rabbitmq jaeger -d
 # Set environment
 cp .env.example .env
 
-# Run the service
-cargo run
+# Run the API service
+cargo run --bin backup-service
+
+# Run the worker (in another terminal)
+cargo run --bin backup-worker
 
 # Or run tests
 cargo test --lib          # unit tests only (no DB needed)
@@ -130,6 +159,15 @@ All protected endpoints are rate-limited per tenant. Response headers:
 - `X-RateLimit-Reset`: window reset time in seconds
 - Returns `429 Too Many Requests` when exceeded
 
+## gRPC Service (Internal)
+
+The `BackupProcessor` gRPC service is hosted by backup-service on port `50051` and used by backup-worker:
+
+| RPC | Description |
+|-----|-------------|
+| `UpdateStatus` | Worker reports job status change (e.g., "running") |
+| `ReportResult` | Worker reports final result (completed/failed, size, entropy) |
+
 ## Usage Examples
 
 ```bash
@@ -156,7 +194,7 @@ BACKUP_ID=$(curl -s localhost:8080/api/v1/backups \
 curl -s -X POST "localhost:8080/api/v1/backups/$BACKUP_ID/analyze" \
   -H "Authorization: Bearer $TOKEN" | jq
 
-# Enqueue for async processing (RabbitMQ)
+# Enqueue for async processing (RabbitMQ → worker → gRPC callback)
 curl -s -X POST "localhost:8080/api/v1/backups/$BACKUP_ID/process" \
   -H "Authorization: Bearer $TOKEN" | jq
 
@@ -174,7 +212,7 @@ curl -s localhost:8080/metrics
 
 When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, distributed traces are exported to Jaeger via OTLP/gRPC.
 
-Open the Jaeger UI at `http://localhost:16686` to view traces across services.
+Open the Jaeger UI at `http://localhost:16686` to view traces across both services.
 
 ### Metrics (Prometheus)
 
@@ -186,7 +224,8 @@ Scrape `/metrics` for Prometheus-format metrics including:
 
 All logs use `tracing` with structured fields. Set `RUST_LOG` to control verbosity:
 ```bash
-RUST_LOG=backup_service=debug,tower_http=debug,sqlx=warn
+RUST_LOG=backup_service=debug,tower_http=debug,sqlx=warn  # API service
+RUST_LOG=backup_worker=debug                               # Worker
 ```
 
 ## Kubernetes Deployment
@@ -204,8 +243,8 @@ kubectl get hpa -n backup-service
 ```
 
 The K8s setup includes:
-- **API Deployment** (3 replicas) with liveness/readiness/startup probes
-- **Worker Deployment** (2 replicas) consuming from RabbitMQ
+- **API Deployment** (3 replicas) with liveness/readiness/startup probes, HTTP + gRPC ports
+- **Worker Deployment** (2 replicas) consuming from RabbitMQ, reporting via gRPC
 - **HPA** auto-scaling API (3-20 pods) and Worker (2-10 pods) on CPU usage
 - **Ingress** with TLS termination
-- **ConfigMap** + **Secret** for configuration
+- **ConfigMap** + **Secret** for configuration (separate configs per component)
