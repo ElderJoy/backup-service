@@ -1,7 +1,7 @@
 //! FFI bindings to C entropy calculator.
 //!
 //! Demonstrates calling C code from Rust via FFI.
-//! The C implementation lives in `c_src/entropy.c` and is compiled
+//! The C implementation lives in `ffi/c_src/entropy.c` and is compiled
 //! by the `cc` crate in `build.rs`.
 
 unsafe extern "C" {

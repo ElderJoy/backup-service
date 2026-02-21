@@ -73,11 +73,11 @@ backup-service/                     # workspace root
 │   │       ├── lib.rs
 │   │       ├── worker.rs           # BackupJob, AMQP topology, publish_job
 │   │       ├── telemetry.rs        # OpenTelemetry + tracing-subscriber setup
+│   │       ├── ffi.rs              # Safe Rust wrapper for C entropy code
 │   │       ├── ffi/
-│   │       │   ├── mod.rs          # Safe Rust wrapper for C entropy code
 │   │       │   └── c_src/
 │   │       │       └── entropy.c   # Shannon entropy in C (FFI target)
-│   │       └── proto.rs            # tonic::include_proto! — shared gRPC types
+│   │       └── (proto in lib.rs)   # tonic::include_proto! — shared gRPC types
 │   │
 │   ├── backup-service/             # API server binary crate
 │   │   ├── Cargo.toml
@@ -91,11 +91,13 @@ backup-service/                     # workspace root
 │   │   │   ├── errors.rs           # AppError enum → HTTP responses
 │   │   │   ├── models.rs           # Domain types, newtypes, request/response DTOs
 │   │   │   ├── cache.rs            # Redis caching with graceful degradation
-│   │   │   ├── db/mod.rs           # Connection pool + migration runner
+│   │   │   ├── db.rs               # Connection pool + migration runner
+│   │   │   ├── handlers.rs        # Module root
 │   │   │   ├── handlers/
 │   │   │   │   ├── auth.rs         # Login endpoint (JWT issuance)
 │   │   │   │   ├── backups.rs      # CRUD + entropy analysis + job enqueue
 │   │   │   │   └── health.rs       # Liveness + readiness probes
+│   │   │   ├── middleware.rs     # Module root
 │   │   │   └── middleware/
 │   │   │       ├── auth.rs         # JWT verification middleware
 │   │   │       └── rate_limit.rs   # Per-tenant rate limiting middleware

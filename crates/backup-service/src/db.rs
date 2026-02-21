@@ -38,7 +38,7 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
     // Migration 001
     if !applied.contains(&1) {
         tracing::info!("Applying migration 001: create_backups");
-        sqlx::query(include_str!("../../../../migrations/001_create_backups.sql"))
+        sqlx::query(include_str!("../../../migrations/001_create_backups.sql"))
             .execute(pool)
             .await?;
 
