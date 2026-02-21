@@ -35,7 +35,7 @@ The system consists of two separate binaries communicating via message queue and
 | **Testing** | Unit tests (`#[test]`), async integration tests (`#[tokio::test]`), input validation tests, rate limiter tests, proto message tests |
 | **Redis** | Caching layer with TTL, cache invalidation on mutations, graceful degradation when Redis is down |
 | **RabbitMQ** | AMQP producer/consumer with `lapin`, durable exchanges/queues, message acknowledgement/rejection, dead-letter handling |
-| **Docker & K8s** | Separate Dockerfiles per binary (Option B): `Dockerfile` → API image, `Dockerfile.worker` → worker image; docker-compose and K8s use two images, explicit commands, worker Secret (AMQP only) |
+| **Docker & K8s** | Separate Dockerfiles per binary (Option B): `Dockerfile.service` → API image, `Dockerfile.worker` → worker image; docker-compose and K8s use two images, explicit commands, worker Secret (AMQP only) |
 | **Observability** | `tracing` structured logging, Prometheus metrics endpoint (`/metrics`), OpenTelemetry distributed tracing exported to Jaeger, health checks |
 | **FFI** | C entropy calculator called from Rust via `extern "C"`, compiled with `cc` crate in `build.rs` |
 | **Rate Limiting** | Per-tenant sliding window rate limiter with `X-RateLimit-*` response headers, configurable via environment |
@@ -52,7 +52,7 @@ dependency set — the idiomatic Rust pattern for multi-binary projects
 backup-service/                     # workspace root
 ├── Cargo.toml                      # [workspace] + [workspace.dependencies]
 ├── Cargo.lock                      # shared lockfile
-├── Dockerfile                      # API image only (backup-service binary)
+├── Dockerfile.service              # API image only (backup-service binary)
 ├── Dockerfile.worker               # Worker image only (backup-worker binary)
 ├── docker-compose.yml              # Local dev: API + worker + infra (two images)
 ├── proto/
@@ -130,13 +130,13 @@ This builds two images (`backup-service:latest`, `backup-worker:latest`) and sta
 
 To build images individually:
 ```bash
-docker build -t backup-service:latest -f Dockerfile .
+docker build -t backup-service:latest -f Dockerfile.service .
 docker build -t backup-worker:latest -f Dockerfile.worker .
 ```
 
 **Testing with Podman** (Docker-compatible CLI): ensure the Podman machine is running (`podman machine start` on macOS), then use `podman` in place of `docker`:
 ```bash
-podman build -t backup-service:latest -f Dockerfile .
+podman build -t backup-service:latest -f Dockerfile.service .
 podman build -t backup-worker:latest -f Dockerfile.worker .
 podman run --rm backup-service:latest backup-service  # exits when DB unavailable; confirms binary runs
 podman run --rm backup-worker:latest backup-worker    # exits when AMQP unavailable; confirms binary runs

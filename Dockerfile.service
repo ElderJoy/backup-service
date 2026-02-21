@@ -1,5 +1,5 @@
 # API server image only (backup-service binary).
-# Build: docker build -t backup-service:latest -f Dockerfile .
+# Build: docker build -t backup-service:latest -f Dockerfile.service .
 # See Dockerfile.worker for the worker image.
 
 # Stage 1: Build
