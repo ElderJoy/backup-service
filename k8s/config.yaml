@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: acronis
+  name: backup-service
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: backup-service
-  namespace: acronis
+  namespace: backup-service
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: backup-service-config
-  namespace: acronis
+  namespace: backup-service
 data:
   LISTEN_ADDR: "0.0.0.0:8080"
   RUST_LOG: "backup_service=info,tower_http=info,sqlx=warn"
@@ -25,10 +25,10 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: backup-service-secrets
-  namespace: acronis
+  namespace: backup-service
 type: Opaque
 stringData:
-  DATABASE_URL: "postgres://backup:CHANGE_ME@postgres.acronis:5432/backup_service"
-  REDIS_URL: "redis://redis.acronis:6379"
-  AMQP_URL: "amqp://backup:CHANGE_ME@rabbitmq.acronis:5672/%2f"
+  DATABASE_URL: "postgres://backup:CHANGE_ME@postgres:5432/backup_service"
+  REDIS_URL: "redis://redis:6379"
+  AMQP_URL: "amqp://backup:CHANGE_ME@rabbitmq:5672/%2f"
   JWT_SECRET: "CHANGE_ME_TO_A_RANDOM_256_BIT_KEY"

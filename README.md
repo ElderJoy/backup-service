@@ -199,8 +199,8 @@ kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/hpa.yaml
 
 # Check status
-kubectl get pods -n acronis
-kubectl get hpa -n acronis
+kubectl get pods -n backup-service
+kubectl get hpa -n backup-service
 ```
 
 The K8s setup includes:
