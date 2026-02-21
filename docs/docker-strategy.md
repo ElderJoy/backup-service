@@ -6,9 +6,9 @@ The project uses **Option B**:
 
 | Asset | Approach |
 |-------|----------|
-| **Dockerfile** | Builds **only** the API binary (`backup-service`). Image contains a single executable. |
+| **Dockerfile.service** | Builds **only** the API binary (`backup-service`). Image contains a single executable. |
 | **Dockerfile.worker** | Builds **only** the worker binary (`backup-worker`). Image contains a single executable. |
-| **docker-compose** | `app` builds with `Dockerfile` → `backup-service:latest`; `worker` builds with `Dockerfile.worker` → `backup-worker:latest`. Both use explicit `command`. |
+| **docker-compose** | `app` builds with `Dockerfile.service` → `backup-service:latest`; `worker` builds with `Dockerfile.worker` → `backup-worker:latest`. Both use explicit `command`. |
 | **K8s** | API Deployment uses `image: backup-service:latest` and `command: ["backup-service"]`; Worker Deployment uses `image: backup-worker:latest` and `command: ["backup-worker"]`. Worker uses its own Secret (`backup-worker-secrets`) with only `AMQP_URL` (least privilege). |
 
 So: **two images, one process per image**, with explicit commands and separate worker secrets.
