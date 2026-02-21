@@ -3,11 +3,11 @@
 //! Consumes jobs from RabbitMQ, performs entropy analysis via FFI,
 //! and reports results back to backup-service via gRPC.
 
-use backup_service::ffi;
-use backup_service::proto::backup_processor_client::BackupProcessorClient;
-use backup_service::proto::{ProcessingResult, StatusUpdate};
-use backup_service::worker::{connect_rabbitmq, create_channel, BackupJob};
-use backup_service::telemetry;
+use backup_common::ffi;
+use backup_common::proto::backup_processor_client::BackupProcessorClient;
+use backup_common::proto::{ProcessingResult, StatusUpdate};
+use backup_common::worker::{connect_rabbitmq, create_channel, BackupJob};
+use backup_common::telemetry;
 
 use lapin::options::*;
 use lapin::types::FieldTable;

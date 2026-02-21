@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use tokio::signal;
 
+use backup_common::proto::backup_processor_server::BackupProcessorServer;
+use backup_common::{telemetry, worker};
 use backup_service::cache::CacheLayer;
 use backup_service::config::AppConfig;
 use backup_service::grpc::BackupProcessorService;
 use backup_service::middleware::rate_limit::InMemoryRateLimiter;
-use backup_service::proto::backup_processor_server::BackupProcessorServer;
 use backup_service::state::AppState;
-use backup_service::{db, router, telemetry, worker};
+use backup_service::{db, router};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

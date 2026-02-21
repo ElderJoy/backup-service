@@ -1,0 +1,34 @@
+[package]
+name = "backup-worker"
+version = "0.1.0"
+edition = "2024"
+description = "Background worker: RabbitMQ consumer, FFI entropy analysis, gRPC result reporting"
+
+[[bin]]
+name = "backup-worker"
+path = "src/main.rs"
+
+[dependencies]
+backup-common = { path = "../backup-common" }
+
+# gRPC client
+tonic = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+
+# Message queue
+lapin = { workspace = true }
+
+# Serialization
+serde_json = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Utilities
+dotenvy = { workspace = true }

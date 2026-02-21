@@ -522,41 +522,71 @@ dependencies = [
 ]
 
 [[package]]
+name = "backup-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cc",
+ "chrono",
+ "lapin",
+ "libc",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry-semantic-conventions",
+ "opentelemetry_sdk",
+ "prost",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "backup-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum 0.8.8",
  "axum-test",
- "cc",
+ "backup-common",
  "chrono",
  "dotenvy",
  "jsonwebtoken",
  "lapin",
- "libc",
  "metrics",
  "metrics-exporter-prometheus",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry-semantic-conventions",
- "opentelemetry_sdk",
- "prost",
  "redis",
  "serde",
  "serde_json",
  "sqlx",
  "thiserror 2.0.18",
  "tokio",
- "tokio-stream",
  "tokio-test",
  "tonic",
- "tonic-build",
  "tower 0.5.3",
  "tower-http",
  "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "backup-worker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "backup-common",
+ "dotenvy",
+ "lapin",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
 ]
 
 [[package]]

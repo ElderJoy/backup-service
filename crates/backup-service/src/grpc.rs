@@ -8,8 +8,8 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
-use crate::proto::backup_processor_server::BackupProcessor;
-use crate::proto::{Ack, ProcessingResult, StatusUpdate};
+use backup_common::proto::backup_processor_server::BackupProcessor;
+use backup_common::proto::{Ack, ProcessingResult, StatusUpdate};
 
 /// gRPC service backed by PostgreSQL — receives status updates and results
 /// from the backup-worker process.
@@ -118,7 +118,7 @@ impl BackupProcessor for BackupProcessorService {
 
 #[cfg(test)]
 mod tests {
-    use crate::proto::{ProcessingResult, StatusUpdate};
+    use backup_common::proto::{ProcessingResult, StatusUpdate};
 
     #[test]
     fn status_update_construction() {

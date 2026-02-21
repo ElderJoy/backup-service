@@ -1,0 +1,29 @@
+[package]
+name = "backup-common"
+version = "0.1.0"
+edition = "2024"
+description = "Shared library: AMQP types, FFI entropy, telemetry, proto definitions"
+build = "build.rs"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+lapin = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-semantic-conventions = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+libc = { workspace = true }
+anyhow = { workspace = true }
+
+[build-dependencies]
+cc = { workspace = true }
+tonic-build = { workspace = true }

@@ -48,10 +48,10 @@ pub async fn get_backup(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<BackupResponse>, AppError> {
-    if let Some(cached) = state.cache.get_backup(id).await {
-        if cached.tenant_id == claims.tenant_id {
-            return Ok(Json(cached.into()));
-        }
+    if let Some(cached) = state.cache.get_backup(id).await
+        && cached.tenant_id == claims.tenant_id
+    {
+        return Ok(Json(cached.into()));
     }
 
     let backup: Backup = sqlx::query_as(
@@ -79,7 +79,7 @@ pub async fn list_backups(
     Extension(claims): Extension<Claims>,
     Query(params): Query<ListParams>,
 ) -> Result<Json<ListResponse<BackupResponse>>, AppError> {
-    let limit = params.limit.min(100).max(1);
+    let limit = params.limit.clamp(1, 100);
     let offset = params.offset.max(0);
 
     let (backups, total): (Vec<Backup>, i64) = match &params.status {
@@ -230,11 +230,11 @@ pub async fn analyze_backup(
     let synthetic_data: Vec<u8> = backup.source_path.bytes().cycle().take(4096).collect();
 
     // FFI call to C entropy calculator — offloaded to blocking threadpool
-    let entropy = tokio::task::spawn_blocking(move || crate::ffi::shannon_entropy(&synthetic_data))
+    let entropy = tokio::task::spawn_blocking(move || backup_common::ffi::shannon_entropy(&synthetic_data))
         .await
         .map_err(|e| AppError::Internal(anyhow::anyhow!("task join error: {e}")))?;
 
-    let level = crate::ffi::EntropyLevel::classify(entropy);
+    let level = backup_common::ffi::EntropyLevel::classify(entropy);
 
     tracing::info!(
         backup_id = %id,
@@ -279,14 +279,14 @@ pub async fn enqueue_backup(
         .as_ref()
         .ok_or_else(|| AppError::Internal(anyhow::anyhow!("RabbitMQ not configured")))?;
 
-    let job = crate::worker::BackupJob {
+    let job = backup_common::worker::BackupJob {
         backup_id: backup.id,
         tenant_id: backup.tenant_id,
         source_path: backup.source_path,
         encryption_enabled: backup.encryption_enabled,
     };
 
-    crate::worker::publish_job(channel, &job)
+    backup_common::worker::publish_job(channel, &job)
         .await
         .map_err(|e| AppError::Internal(anyhow::anyhow!("failed to enqueue job: {e}")))?;
 

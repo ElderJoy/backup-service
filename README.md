@@ -39,57 +39,74 @@ The system consists of two separate binaries communicating via message queue and
 | **Observability** | `tracing` structured logging, Prometheus metrics endpoint (`/metrics`), OpenTelemetry distributed tracing exported to Jaeger, health checks |
 | **FFI** | C entropy calculator called from Rust via `extern "C"`, compiled with `cc` crate in `build.rs` |
 | **Rate Limiting** | Per-tenant sliding window rate limiter with `X-RateLimit-*` response headers, configurable via environment |
-| **Binary Separation** | `[[bin]]` targets in Cargo.toml, shared library crate, independent deployment and scaling |
+| **Cargo Workspace** | Three-crate workspace (`backup-common`, `backup-service`, `backup-worker`), `[workspace.dependencies]` for version alignment, enforced dependency boundaries |
 | **Code Quality** | Input validation (path traversal prevention), proper error types with `thiserror`, newtype pattern, SAFETY comments on FFI |
 
-## Project Structure
+## Project Structure (Cargo Workspace)
+
+The project uses a **Cargo workspace** with three crates, each with its own
+dependency set — the idiomatic Rust pattern for multi-binary projects
+(used by Tokio, Hyper, Tonic, and rustc itself).
 
 ```
-backup-service/
-├── build.rs                    # Compiles C FFI code + protobuf definitions
-├── Cargo.toml                  # Dependencies, [[bin]] targets
-├── docker-compose.yml          # Local dev: API + worker + infra
-├── Dockerfile                  # Multi-stage build (both binaries)
+backup-service/                     # workspace root
+├── Cargo.toml                      # [workspace] + [workspace.dependencies]
+├── Cargo.lock                      # shared lockfile
+├── Dockerfile                      # Multi-stage build (both binaries)
+├── docker-compose.yml              # Local dev: API + worker + infra
 ├── proto/
-│   └── backup.proto            # gRPC service definition (BackupProcessor)
-├── k8s/                        # Kubernetes manifests
-│   ├── config.yaml             # Namespace, ServiceAccount, ConfigMaps, Secret
-│   ├── deployment.yaml         # API server + Worker deployments
-│   ├── service.yaml            # ClusterIP Service (HTTP + gRPC) + Ingress
-│   └── hpa.yaml                # HPA for API (3-20 pods) + Worker (2-10 pods)
+│   └── backup.proto                # gRPC service definition (BackupProcessor)
+├── k8s/                            # Kubernetes manifests
+│   ├── config.yaml                 # Namespace, ServiceAccount, ConfigMaps, Secret
+│   ├── deployment.yaml             # API server + Worker deployments
+│   ├── service.yaml                # ClusterIP Service (HTTP + gRPC) + Ingress
+│   └── hpa.yaml                    # HPA for API + Worker auto-scaling
 ├── migrations/
-│   └── 001_create_backups.sql  # Database schema
-├── src/
-│   ├── main.rs                 # backup-service: HTTP + gRPC server entry point
-│   ├── bin/
-│   │   └── backup-worker.rs    # backup-worker: RabbitMQ consumer + gRPC client
-│   ├── lib.rs                  # Public modules (shared library)
-│   ├── config.rs               # Environment-based configuration
-│   ├── state.rs                # Shared app state (Pool, Cache, RabbitMQ, RateLimiter)
-│   ├── router.rs               # Route definitions + middleware stack
-│   ├── grpc.rs                 # gRPC server (BackupProcessor service)
-│   ├── errors.rs               # AppError enum → HTTP responses (thiserror)
-│   ├── models.rs               # Domain types, newtypes, request/response DTOs
-│   ├── cache.rs                # Redis caching with graceful degradation
-│   ├── telemetry.rs            # OpenTelemetry + tracing-subscriber setup
-│   ├── worker.rs               # AMQP topology + job publishing
-│   ├── db/
-│   │   └── mod.rs              # Connection pool + migration runner
-│   ├── handlers/
-│   │   ├── mod.rs
-│   │   ├── auth.rs             # Login endpoint (JWT issuance)
-│   │   ├── backups.rs          # CRUD + entropy analysis + job enqueue
-│   │   └── health.rs           # Liveness + readiness probes
-│   ├── middleware/
-│   │   ├── mod.rs
-│   │   ├── auth.rs             # JWT verification middleware
-│   │   └── rate_limit.rs       # Per-tenant rate limiting middleware
-│   └── ffi/
-│       ├── mod.rs              # Safe Rust wrapper for C entropy code
-│       └── c_src/
-│           └── entropy.c       # Shannon entropy in C (FFI target)
-└── tests/
-    └── api_tests.rs            # Integration tests (full HTTP lifecycle)
+│   └── 001_create_backups.sql      # Database schema
+│
+├── crates/
+│   ├── backup-common/              # shared library crate
+│   │   ├── Cargo.toml
+│   │   ├── build.rs                # cc (entropy.c) + tonic-build (proto)
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── worker.rs           # BackupJob, AMQP topology, publish_job
+│   │       ├── telemetry.rs        # OpenTelemetry + tracing-subscriber setup
+│   │       ├── ffi/
+│   │       │   ├── mod.rs          # Safe Rust wrapper for C entropy code
+│   │       │   └── c_src/
+│   │       │       └── entropy.c   # Shannon entropy in C (FFI target)
+│   │       └── proto.rs            # tonic::include_proto! — shared gRPC types
+│   │
+│   ├── backup-service/             # API server binary crate
+│   │   ├── Cargo.toml
+│   │   ├── src/
+│   │   │   ├── main.rs             # HTTP + gRPC server entry point
+│   │   │   ├── lib.rs              # Module declarations
+│   │   │   ├── config.rs           # Environment-based configuration
+│   │   │   ├── state.rs            # AppState (Pool, Cache, RabbitMQ, RateLimiter)
+│   │   │   ├── router.rs           # Route definitions + middleware stack
+│   │   │   ├── grpc.rs             # gRPC server (BackupProcessor impl)
+│   │   │   ├── errors.rs           # AppError enum → HTTP responses
+│   │   │   ├── models.rs           # Domain types, newtypes, request/response DTOs
+│   │   │   ├── cache.rs            # Redis caching with graceful degradation
+│   │   │   ├── db/mod.rs           # Connection pool + migration runner
+│   │   │   ├── handlers/
+│   │   │   │   ├── auth.rs         # Login endpoint (JWT issuance)
+│   │   │   │   ├── backups.rs      # CRUD + entropy analysis + job enqueue
+│   │   │   │   └── health.rs       # Liveness + readiness probes
+│   │   │   └── middleware/
+│   │   │       ├── auth.rs         # JWT verification middleware
+│   │   │       └── rate_limit.rs   # Per-tenant rate limiting middleware
+│   │   └── tests/
+│   │       └── api_tests.rs        # Integration tests (full HTTP lifecycle)
+│   │
+│   └── backup-worker/              # worker binary crate
+│       ├── Cargo.toml
+│       └── src/
+│           └── main.rs             # RabbitMQ consumer + gRPC client + FFI
+│
+└── docs/                           # Architecture & migration documents
 ```
 
 ## Quick Start
