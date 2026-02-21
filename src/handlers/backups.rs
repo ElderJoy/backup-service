@@ -252,6 +252,55 @@ pub async fn analyze_backup(
     Ok(Json(resp))
 }
 
+/// POST /api/v1/backups/:id/process
+///
+/// Enqueues a backup job to RabbitMQ for async processing by the worker.
+pub async fn enqueue_backup(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let backup: Backup = sqlx::query_as(
+        r#"
+        SELECT id, tenant_id, source_path, size_bytes,
+               status, encryption_enabled, created_at, updated_at
+        FROM backups
+        WHERE id = $1 AND tenant_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(claims.tenant_id)
+    .fetch_optional(&*state.db)
+    .await?
+    .ok_or_else(|| AppError::NotFound(format!("backup {id}")))?;
+
+    let channel = state
+        .amqp_channel
+        .as_ref()
+        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("RabbitMQ not configured")))?;
+
+    let job = crate::worker::BackupJob {
+        backup_id: backup.id,
+        tenant_id: backup.tenant_id,
+        source_path: backup.source_path,
+        encryption_enabled: backup.encryption_enabled,
+    };
+
+    crate::worker::publish_job(channel, &job)
+        .await
+        .map_err(|e| AppError::Internal(anyhow::anyhow!("failed to enqueue job: {e}")))?;
+
+    tracing::info!(backup_id = %id, "Backup job enqueued for processing");
+
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(serde_json::json!({
+            "message": "backup job enqueued",
+            "backup_id": id,
+        })),
+    ))
+}
+
 fn validate_source_path(path: &str) -> Result<(), AppError> {
     if path.is_empty() {
         return Err(AppError::Validation("source_path cannot be empty".into()));

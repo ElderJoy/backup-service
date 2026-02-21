@@ -8,3 +8,5 @@ pub mod middleware;
 pub mod models;
 pub mod router;
 pub mod state;
+pub mod telemetry;
+pub mod worker;

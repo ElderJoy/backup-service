@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backup-service
+  namespace: acronis
+  labels:
+    app: backup-service
+spec:
+  selector:
+    app: backup-service
+    component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backup-service
+  namespace: acronis
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "50"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - backup-api.acronis.com
+      secretName: backup-api-tls
+  rules:
+    - host: backup-api.acronis.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backup-service
+                port:
+                  name: http

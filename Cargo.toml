@@ -8,11 +8,12 @@ build = "build.rs"
 [dependencies]
 # Web framework
 axum = { version = "0.8", features = ["macros"] }
-tower-http = { version = "0.6", features = ["cors", "trace", "timeout", "compression-gzip"] }
-tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "timeout", "compression-gzip", "limit"] }
+tower = { version = "0.5", features = ["limit", "load-shed", "buffer"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -29,12 +30,20 @@ sqlx = { version = "0.8", features = [
 # Redis
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 
+# Message queue (RabbitMQ / AMQP)
+lapin = "2"
+
 # Auth
 jsonwebtoken = "9"
 
 # Observability
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
+tracing-opentelemetry = "0.28"
+opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+opentelemetry-semantic-conventions = "0.27"
 metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 

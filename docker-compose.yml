@@ -6,14 +6,20 @@ services:
     environment:
       DATABASE_URL: postgres://backup:backup@db:5432/backup_service
       REDIS_URL: redis://redis:6379
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/%2f
       JWT_SECRET: docker-compose-secret-change-in-prod
       RUST_LOG: backup_service=debug,tower_http=debug
       LISTEN_ADDR: 0.0.0.0:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      RATE_LIMIT_MAX_REQUESTS: "100"
+      RATE_LIMIT_WINDOW_SECS: "60"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine
@@ -35,6 +41,29 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI (guest/guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_running
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.64
+    ports:
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+      - "16686:16686"   # Jaeger UI
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
 
 volumes:
   pgdata:
