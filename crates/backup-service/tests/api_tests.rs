@@ -40,7 +40,7 @@ async fn setup() -> Option<axum_test::TestServer> {
     };
 
     let app = backup_service::router::create_router(state);
-    Some(axum_test::TestServer::new(app).ok()?)
+    axum_test::TestServer::new(app).ok()
 }
 
 fn get_test_token() -> String {
