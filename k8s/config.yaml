@@ -43,3 +43,13 @@ stringData:
   REDIS_URL: "redis://redis:6379"
   AMQP_URL: "amqp://backup:CHANGE_ME@rabbitmq:5672/%2f"
   JWT_SECRET: "CHANGE_ME_TO_A_RANDOM_256_BIT_KEY"
+---
+# Worker gets only AMQP (least privilege — no DB/Redis/JWT)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-worker-secrets
+  namespace: backup-service
+type: Opaque
+stringData:
+  AMQP_URL: "amqp://backup:CHANGE_ME@rabbitmq:5672/%2f"

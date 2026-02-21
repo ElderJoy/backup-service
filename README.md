@@ -35,7 +35,7 @@ The system consists of two separate binaries communicating via message queue and
 | **Testing** | Unit tests (`#[test]`), async integration tests (`#[tokio::test]`), input validation tests, rate limiter tests, proto message tests |
 | **Redis** | Caching layer with TTL, cache invalidation on mutations, graceful degradation when Redis is down |
 | **RabbitMQ** | AMQP producer/consumer with `lapin`, durable exchanges/queues, message acknowledgement/rejection, dead-letter handling |
-| **Docker & K8s** | Multi-stage Dockerfile (both binaries), docker-compose with all services, Kubernetes manifests (Deployment, Service, Ingress, ConfigMap, Secret, HPA) |
+| **Docker & K8s** | Separate Dockerfiles per binary (Option B): `Dockerfile` → API image, `Dockerfile.worker` → worker image; docker-compose and K8s use two images, explicit commands, worker Secret (AMQP only) |
 | **Observability** | `tracing` structured logging, Prometheus metrics endpoint (`/metrics`), OpenTelemetry distributed tracing exported to Jaeger, health checks |
 | **FFI** | C entropy calculator called from Rust via `extern "C"`, compiled with `cc` crate in `build.rs` |
 | **Rate Limiting** | Per-tenant sliding window rate limiter with `X-RateLimit-*` response headers, configurable via environment |
@@ -52,8 +52,9 @@ dependency set — the idiomatic Rust pattern for multi-binary projects
 backup-service/                     # workspace root
 ├── Cargo.toml                      # [workspace] + [workspace.dependencies]
 ├── Cargo.lock                      # shared lockfile
-├── Dockerfile                      # Multi-stage build (both binaries)
-├── docker-compose.yml              # Local dev: API + worker + infra
+├── Dockerfile                      # API image only (backup-service binary)
+├── Dockerfile.worker               # Worker image only (backup-worker binary)
+├── docker-compose.yml              # Local dev: API + worker + infra (two images)
 ├── proto/
 │   └── backup.proto                # gRPC service definition (BackupProcessor)
 ├── k8s/                            # Kubernetes manifests
@@ -117,13 +118,28 @@ backup-service/                     # workspace root
 docker-compose up --build
 ```
 
-This starts:
+This builds two images (`backup-service:latest`, `backup-worker:latest`) and starts:
 - **backup-service** on `localhost:8080` (HTTP) + `localhost:50051` (gRPC)
 - **backup-worker** connected to RabbitMQ + API gRPC
 - **PostgreSQL 16** on `localhost:5432`
 - **Redis 7** on `localhost:6379`
 - **RabbitMQ 3** on `localhost:5672` (management UI at `localhost:15672`)
 - **Jaeger** on `localhost:16686` (trace UI)
+
+To build images individually:
+```bash
+docker build -t backup-service:latest -f Dockerfile .
+docker build -t backup-worker:latest -f Dockerfile.worker .
+```
+
+**Testing with Podman** (Docker-compatible CLI): ensure the Podman machine is running (`podman machine start` on macOS), then use `podman` in place of `docker`:
+```bash
+podman build -t backup-service:latest -f Dockerfile .
+podman build -t backup-worker:latest -f Dockerfile.worker .
+podman run --rm backup-service:latest backup-service  # exits when DB unavailable; confirms binary runs
+podman run --rm backup-worker:latest backup-worker    # exits when AMQP unavailable; confirms binary runs
+```
+Full stack: `podman compose up --build` (or `docker compose up --build`).
 
 ### Option 2: Local Development
 
@@ -260,8 +276,8 @@ kubectl get hpa -n backup-service
 ```
 
 The K8s setup includes:
-- **API Deployment** (3 replicas) with liveness/readiness/startup probes, HTTP + gRPC ports
-- **Worker Deployment** (2 replicas) consuming from RabbitMQ, reporting via gRPC
+- **API Deployment** (`image: backup-service:latest`, explicit `command: ["backup-service"]`) with liveness/readiness/startup probes, HTTP + gRPC ports
+- **Worker Deployment** (`image: backup-worker:latest`, explicit `command: ["backup-worker"]`) consuming from RabbitMQ, reporting via gRPC; uses **backup-worker-secrets** (AMQP only, least privilege)
 - **HPA** auto-scaling API (3-20 pods) and Worker (2-10 pods) on CPU usage
 - **Ingress** with TLS termination
-- **ConfigMap** + **Secret** for configuration (separate configs per component)
+- **ConfigMap** + **Secret** per component (API: backup-service-config + backup-service-secrets; Worker: backup-worker-config + backup-worker-secrets)

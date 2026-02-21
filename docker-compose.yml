@@ -1,6 +1,10 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: backup-service:latest
+    command: ["backup-service"]
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -24,8 +28,11 @@ services:
         condition: service_healthy
 
   worker:
-    build: .
-    entrypoint: ["backup-worker"]
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: backup-worker:latest
+    command: ["backup-worker"]
     environment:
       AMQP_URL: amqp://guest:guest@rabbitmq:5672/%2f
       GRPC_TARGET: http://app:50051

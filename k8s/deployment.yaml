@@ -32,6 +32,7 @@ spec:
       containers:
         - name: backup-service
           image: backup-service:latest
+          command: ["backup-service"]
           ports:
             - name: http
               containerPort: 8080
@@ -100,13 +101,13 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: backup-worker
-          image: backup-service:latest
+          image: backup-worker:latest
           command: ["backup-worker"]
           envFrom:
             - configMapRef:
                 name: backup-worker-config
             - secretRef:
-                name: backup-service-secrets
+                name: backup-worker-secrets
           resources:
             requests:
               cpu: "500m"

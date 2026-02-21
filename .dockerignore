@@ -1,0 +1,27 @@
+# Build artifacts (huge; image is built inside container)
+target/
+**/target/
+
+# Git
+.git/
+.gitignore
+
+# IDE and misc
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Local env (never copy into image)
+.env
+.env.*
+!.env.example
+
+# Docs and tests (not needed for production image build)
+docs/
+*.md
+!README.md
+
+# CI
+.github/

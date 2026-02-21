@@ -1,6 +1,6 @@
-# API server image only (backup-service binary).
-# Build: docker build -t backup-service:latest -f Dockerfile .
-# See Dockerfile.worker for the worker image.
+# Worker image only (backup-worker binary).
+# Build: docker build -t backup-worker:latest -f Dockerfile.worker .
+# See Dockerfile for the API server image.
 
 # Stage 1: Build
 FROM rust:bookworm AS builder
@@ -34,31 +34,26 @@ COPY proto/ proto/
 RUN cargo build --release 2>/dev/null || true
 RUN rm -rf crates/*/src
 
-# Build only the API binary
+# Build only the worker binary
 COPY crates/ crates/
-COPY migrations/ migrations/
 RUN touch crates/backup-common/src/lib.rs \
     crates/backup-service/src/main.rs crates/backup-service/src/lib.rs \
     crates/backup-worker/src/main.rs \
-    && cargo build --release -p backup-service
+    && cargo build --release -p backup-worker
 
-# Stage 2: Runtime
+# Stage 2: Runtime (minimal — worker has no HTTP server)
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r app && useradd -r -g app app
 
-COPY --from=builder /app/target/release/backup-service /usr/local/bin/
+COPY --from=builder /app/target/release/backup-worker /usr/local/bin/
 
 USER app
-EXPOSE 8080 50051
 
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-ENTRYPOINT ["backup-service"]
+# Worker has no HTTP endpoint; liveness is process-based
+ENTRYPOINT ["backup-worker"]
