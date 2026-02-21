@@ -92,13 +92,13 @@ jobs:
         run: cargo build --release
 
       - name: Upload backup-service binary
-        uses: actions/upload-artifact@4
+        uses: actions/upload-artifact@v4
         with:
           name: backup-service
           path: target/release/backup-service
 
       - name: Upload backup-worker binary
-        uses: actions/upload-artifact@4
+        uses: actions/upload-artifact@v4
         with:
           name: backup-worker
           path: target/release/backup-worker
@@ -113,10 +113,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@3
+        uses: docker/setup-buildx-action@v3
 
       - name: Build backup-service image
-        uses: docker/build-push-action@6
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.service
@@ -136,10 +136,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@3
+        uses: docker/setup-buildx-action@v3
 
       - name: Build backup-worker image
-        uses: docker/build-push-action@6
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.worker
