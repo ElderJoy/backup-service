@@ -93,10 +93,7 @@ pub async fn rate_limit_middleware(request: Request, next: Next) -> Result<Respo
         .unwrap_or_default();
 
     // Extract tenant from JWT claims (set by auth middleware)
-    let tenant_id = request
-        .extensions()
-        .get::<Claims>()
-        .map(|c| c.tenant_id);
+    let tenant_id = request.extensions().get::<Claims>().map(|c| c.tenant_id);
 
     let Some(tenant_id) = tenant_id else {
         // No claims = public route, skip rate limiting
@@ -183,7 +180,12 @@ mod tests {
         for _ in 0..2 {
             assert!(limiter.check_and_increment(tenant_a, &config).await.is_ok());
         }
-        assert!(limiter.check_and_increment(tenant_a, &config).await.is_err());
+        assert!(
+            limiter
+                .check_and_increment(tenant_a, &config)
+                .await
+                .is_err()
+        );
 
         // Tenant B is unaffected
         assert!(limiter.check_and_increment(tenant_b, &config).await.is_ok());

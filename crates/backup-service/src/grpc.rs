@@ -25,10 +25,7 @@ impl BackupProcessorService {
 
 #[tonic::async_trait]
 impl BackupProcessor for BackupProcessorService {
-    async fn update_status(
-        &self,
-        request: Request<StatusUpdate>,
-    ) -> Result<Response<Ack>, Status> {
+    async fn update_status(&self, request: Request<StatusUpdate>) -> Result<Response<Ack>, Status> {
         let msg = request.into_inner();
         let backup_id: uuid::Uuid = msg
             .backup_id

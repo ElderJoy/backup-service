@@ -5,9 +5,9 @@
 //!
 //! Run with: `cargo test -- --test-threads=1`
 
-use axum::http::header::{HeaderName, HeaderValue};
 use axum::http::StatusCode;
-use serde_json::{json, Value};
+use axum::http::header::{HeaderName, HeaderValue};
+use serde_json::{Value, json};
 use std::sync::Arc;
 
 // Helper: build a test app with real database (if available) or skip
@@ -44,8 +44,7 @@ async fn setup() -> Option<axum_test::TestServer> {
 }
 
 fn get_test_token() -> String {
-    let tenant_id =
-        uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let tenant_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     backup_service::middleware::auth::create_token(
         "test-user",
         tenant_id,

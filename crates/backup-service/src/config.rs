@@ -16,8 +16,9 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> Result<Self, anyhow::Error> {
         Ok(Self {
-            database_url: std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://backup:backup@localhost:5432/backup_service".into()),
+            database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://backup:backup@localhost:5432/backup_service".into()
+            }),
             redis_url: std::env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://localhost:6379".into()),
             amqp_url: std::env::var("AMQP_URL")

@@ -1,7 +1,7 @@
+use axum::Extension;
 use axum::extract::{Json, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Extension;
 use uuid::Uuid;
 
 use crate::errors::AppError;
@@ -37,7 +37,10 @@ pub async fn create_backup(
         "Backup created"
     );
 
-    state.cache.invalidate_tenant_backups(claims.tenant_id).await;
+    state
+        .cache
+        .invalidate_tenant_backups(claims.tenant_id)
+        .await;
 
     Ok((StatusCode::CREATED, Json(BackupResponse::from(backup))))
 }
@@ -175,7 +178,10 @@ pub async fn update_backup(
     .ok_or_else(|| AppError::NotFound(format!("backup {id}")))?;
 
     state.cache.invalidate_backup(id).await;
-    state.cache.invalidate_tenant_backups(claims.tenant_id).await;
+    state
+        .cache
+        .invalidate_tenant_backups(claims.tenant_id)
+        .await;
 
     Ok(Json(BackupResponse::from(backup)))
 }
@@ -197,7 +203,10 @@ pub async fn delete_backup(
     }
 
     state.cache.invalidate_backup(id).await;
-    state.cache.invalidate_tenant_backups(claims.tenant_id).await;
+    state
+        .cache
+        .invalidate_tenant_backups(claims.tenant_id)
+        .await;
 
     tracing::info!(backup_id = %id, "Backup deleted");
     Ok(StatusCode::NO_CONTENT)
@@ -230,9 +239,10 @@ pub async fn analyze_backup(
     let synthetic_data: Vec<u8> = backup.source_path.bytes().cycle().take(4096).collect();
 
     // FFI call to C entropy calculator — offloaded to blocking threadpool
-    let entropy = tokio::task::spawn_blocking(move || backup_common::ffi::shannon_entropy(&synthetic_data))
-        .await
-        .map_err(|e| AppError::Internal(anyhow::anyhow!("task join error: {e}")))?;
+    let entropy =
+        tokio::task::spawn_blocking(move || backup_common::ffi::shannon_entropy(&synthetic_data))
+            .await
+            .map_err(|e| AppError::Internal(anyhow::anyhow!("task join error: {e}")))?;
 
     let level = backup_common::ffi::EntropyLevel::classify(entropy);
 

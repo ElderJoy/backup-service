@@ -27,10 +27,10 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
 /// Quick classification of entropy values for threat detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntropyLevel {
-    Low,        // 0.0 - 4.0: structured data, text
-    Normal,     // 4.0 - 6.5: typical documents, binaries
-    High,       // 6.5 - 7.5: compressed data
-    VeryHigh,   // 7.5 - 8.0: encrypted / random (ransomware indicator)
+    Low,      // 0.0 - 4.0: structured data, text
+    Normal,   // 4.0 - 6.5: typical documents, binaries
+    High,     // 6.5 - 7.5: compressed data
+    VeryHigh, // 7.5 - 8.0: encrypted / random (ransomware indicator)
 }
 
 impl EntropyLevel {
@@ -67,7 +67,10 @@ mod tests {
     fn repeated_pattern_has_low_entropy() {
         let data: Vec<u8> = (0..1024).map(|i| (i % 4) as u8).collect();
         let e = shannon_entropy(&data);
-        assert!(e > 1.9 && e < 2.1, "expected ~2.0 for 4-symbol pattern, got {e}");
+        assert!(
+            e > 1.9 && e < 2.1,
+            "expected ~2.0 for 4-symbol pattern, got {e}"
+        );
     }
 
     #[test]
@@ -75,7 +78,10 @@ mod tests {
         let data = b"The quick brown fox jumps over the lazy dog. \
                      This is a test of entropy calculation in Rust.";
         let e = shannon_entropy(data);
-        assert!(e > 3.5 && e < 5.5, "expected moderate entropy for text, got {e}");
+        assert!(
+            e > 3.5 && e < 5.5,
+            "expected moderate entropy for text, got {e}"
+        );
     }
 
     #[test]

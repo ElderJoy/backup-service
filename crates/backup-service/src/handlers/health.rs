@@ -1,7 +1,7 @@
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 
 use crate::state::AppState;
 
@@ -12,10 +12,7 @@ pub async fn health() -> impl IntoResponse {
 
 /// GET /ready — readiness probe (checks database + redis connectivity)
 pub async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
-    let db_ok = sqlx::query("SELECT 1")
-        .execute(&*state.db)
-        .await
-        .is_ok();
+    let db_ok = sqlx::query("SELECT 1").execute(&*state.db).await.is_ok();
 
     let redis_ok = state.cache.ping().await;
 

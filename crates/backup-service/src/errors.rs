@@ -1,6 +1,6 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -44,16 +44,25 @@ impl IntoResponse for AppError {
             Self::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
             Self::Database(e) => {
                 tracing::error!(error = %e, "Database error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal server error".into(),
+                )
             }
             Self::Redis(e) => {
                 tracing::error!(error = %e, "Redis error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal server error".into(),
+                )
             }
             Self::Jwt(_) => (StatusCode::UNAUTHORIZED, "invalid token".into()),
             Self::Internal(e) => {
                 tracing::error!(error = %e, "Internal error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal server error".into(),
+                )
             }
         };
 

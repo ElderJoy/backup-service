@@ -6,8 +6,8 @@
 use backup_common::ffi;
 use backup_common::proto::backup_processor_client::BackupProcessorClient;
 use backup_common::proto::{ProcessingResult, StatusUpdate};
-use backup_common::worker::{connect_rabbitmq, create_channel, BackupJob};
 use backup_common::telemetry;
+use backup_common::worker::{BackupJob, connect_rabbitmq, create_channel};
 
 use lapin::options::*;
 use lapin::types::FieldTable;
@@ -188,9 +188,7 @@ async fn process_and_report(
 
 async fn shutdown_signal() {
     let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to listen for ctrl+c");
+        signal::ctrl_c().await.expect("failed to listen for ctrl+c");
     };
 
     #[cfg(unix)]

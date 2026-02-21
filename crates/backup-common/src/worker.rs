@@ -4,7 +4,7 @@
 //! The actual job consumption and processing lives in the `backup-worker` binary.
 
 use lapin::{
-    options::*, types::FieldTable, BasicProperties, Channel, Connection, ConnectionProperties,
+    BasicProperties, Channel, Connection, ConnectionProperties, options::*, types::FieldTable,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

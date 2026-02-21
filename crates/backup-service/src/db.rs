@@ -1,5 +1,5 @@
-use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 
 /// Create a PostgreSQL connection pool with sensible defaults.
@@ -42,11 +42,13 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
             .execute(pool)
             .await?;
 
-        sqlx::query("INSERT INTO _sqlx_migrations (version, description, success) VALUES ($1, $2, true)")
-            .bind(1i64)
-            .bind("create_backups")
-            .execute(pool)
-            .await?;
+        sqlx::query(
+            "INSERT INTO _sqlx_migrations (version, description, success) VALUES ($1, $2, true)",
+        )
+        .bind(1i64)
+        .bind("create_backups")
+        .execute(pool)
+        .await?;
     }
 
     tracing::info!("Migrations complete");

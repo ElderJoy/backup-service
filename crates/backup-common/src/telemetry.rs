@@ -3,10 +3,10 @@
 //! When `OTEL_EXPORTER_OTLP_ENDPOINT` is set (e.g. `http://jaeger:4317`),
 //! traces are exported to Jaeger. Otherwise, tracing falls back to stdout only.
 
-use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::KeyValue;
+use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_otlp::WithExportConfig;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Initialize the full observability stack:
 /// - `tracing-subscriber` with env filter for structured logs

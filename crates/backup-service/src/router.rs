@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-use axum::{middleware, Extension, Router};
+use axum::{Extension, Router, middleware};
 use std::time::Duration;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
@@ -9,7 +9,7 @@ use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{auth, backups, health};
-use crate::middleware::auth::{auth_middleware, JwtSecret};
+use crate::middleware::auth::{JwtSecret, auth_middleware};
 use crate::middleware::rate_limit::rate_limit_middleware;
 use crate::state::AppState;
 

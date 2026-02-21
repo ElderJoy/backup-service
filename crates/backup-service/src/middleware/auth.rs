@@ -2,7 +2,7 @@ use axum::extract::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
 use crate::errors::AppError;
 use crate::models::Claims;
