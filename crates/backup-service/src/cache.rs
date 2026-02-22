@@ -168,7 +168,7 @@ mod tests {
         let backup = sample_backup(Uuid::nil(), Uuid::nil());
         cache.set_backup(&backup).await;
         cache
-            .set_tenant_backups(Uuid::nil(), &[backup.clone()], 1)
+            .set_tenant_backups(Uuid::nil(), std::slice::from_ref(&backup), 1)
             .await;
         cache.invalidate_backup(backup.id).await;
         cache.invalidate_tenant_backups(backup.tenant_id).await;

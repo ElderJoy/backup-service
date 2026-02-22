@@ -88,13 +88,7 @@ CI runs these automatically — see [docs/ci-cd.md](docs/ci-cd.md).
 
 ### Git hooks
 
-To match CI before each commit (format + clippy), enable the pre-commit hook once:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-The hook in [.githooks/](.githooks/) runs `cargo fmt --all` (re-staging changes), then `cargo clippy --workspace --all-targets -- -D warnings`. The commit is aborted if clippy fails.
+Pre-commit (fmt + clippy) is managed by [cargo-husky](https://github.com/rhysd/cargo-husky). Hooks are installed automatically when you run **cargo test** (or **cargo build**) in the workspace — no install script. After that, each commit runs `cargo fmt --all` (re-staging changes), then `cargo clippy --workspace --all-targets -- -D warnings`, and the commit is aborted if clippy fails. Hook sources: [.cargo-husky/hooks/](.cargo-husky/hooks/).
 
 ## Deployment
 

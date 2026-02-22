@@ -59,3 +59,4 @@ reqwest = { workspace = true }
 axum-test = { workspace = true }
 tokio-test = { workspace = true }
 wiremock = { workspace = true }
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }

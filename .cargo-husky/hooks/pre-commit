@@ -1,0 +1,20 @@
+#!/bin/sh
+# Match CI: format and clippy before commit. Abort if clippy fails.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+abort() {
+  echo ""
+  echo "*** Commit aborted: pre-commit checks failed. Fix the errors above and try again. ***"
+  exit 1
+}
+trap abort EXIT
+
+echo "Running pre-commit: cargo fmt + clippy (same as CI)..."
+cargo fmt --all
+git add -u
+cargo clippy --workspace --all-targets -- -D warnings
+
+trap - EXIT
+echo "Pre-commit checks passed."
+exit 0
