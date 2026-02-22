@@ -41,6 +41,9 @@ async fn setup() -> Option<axum_test::TestServer> {
         cache_ttl_secs: 300,
         cached_list_limit: 20,
         cached_list_offset: 0,
+        apollo_config_url: None,
+        apollo_poll_interval_secs: 60,
+        apollo_timeout_secs: 10,
     };
     let config_arc = Arc::new(RwLock::new(test_config));
 

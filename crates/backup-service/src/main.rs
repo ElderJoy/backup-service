@@ -1,9 +1,11 @@
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 use tokio::signal;
 
 use backup_common::proto::backup_processor_server::BackupProcessorServer;
 use backup_common::{telemetry, worker};
+use backup_service::apollo;
 use backup_service::cache::CacheLayer;
 use backup_service::config::AppConfig;
 use backup_service::grpc::BackupProcessorService;
@@ -64,6 +66,29 @@ async fn main() -> anyhow::Result<()> {
         InMemoryRateLimiter::default(),
         amqp_channel,
     );
+
+    // Apollo config updater — when APOLLO_CONFIG_URL is set, periodically fetch and merge config.
+    // Spawned task runs until process exit; dropping the JoinHandle does not cancel it (Tokio keeps
+    // the task running on the runtime until the runtime is shut down).
+    {
+        let cfg = config_arc.read().unwrap();
+        if let Some(apollo_url) = cfg.apollo_config_url.as_ref().filter(|s| !s.is_empty()) {
+            let url = apollo_url.clone();
+            let interval = Duration::from_secs(cfg.apollo_poll_interval_secs);
+            let timeout = Duration::from_secs(cfg.apollo_timeout_secs);
+            let client = reqwest::Client::builder()
+                .timeout(timeout)
+                .build()
+                .expect("reqwest client");
+            let updater_config = apollo::ApolloUpdaterConfig {
+                url,
+                interval,
+                timeout,
+            };
+            tokio::spawn(apollo::run_updater_loop(state.clone(), updater_config, client));
+            tracing::info!("Apollo config updater started");
+        }
+    }
 
     // gRPC server — accepts result reports from backup-worker
     let grpc_addr = config_arc.read().unwrap().grpc_addr;

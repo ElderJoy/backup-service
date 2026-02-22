@@ -52,6 +52,10 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 dotenvy = { workspace = true }
 
+# HTTP client (Apollo config fetcher)
+reqwest = { workspace = true }
+
 [dev-dependencies]
 axum-test = { workspace = true }
 tokio-test = { workspace = true }
+wiremock = { workspace = true }

@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use sqlx::PgPool;
 
@@ -42,5 +42,14 @@ impl AppState {
     /// Panics if the lock is poisoned (a writer panicked while holding the lock).
     pub fn config(&self) -> RwLockReadGuard<'_, AppConfig> {
         self.config.read().unwrap()
+    }
+
+    /// Runs a closure with exclusive write access to the config (e.g. for Apollo updater).
+    pub fn with_config_mut<R, F>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut RwLockWriteGuard<'_, AppConfig>) -> R,
+    {
+        let mut guard = self.config.write().unwrap();
+        f(&mut guard)
     }
 }

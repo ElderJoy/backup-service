@@ -213,11 +213,16 @@ RUST_LOG=backup_worker=debug                      # Worker
 
 </details>
 
+## Configuration
+
+When `APOLLO_CONFIG_URL` is set, the API server periodically fetches config from that URL and updates rate limits and cache-related settings in memory. Only a defined subset of options is overridden; URLs and secrets are never updated from the remote. See [Apollo Config Updater](docs/apollo-config-updater.md) for env vars and payload format.
+
 ## Documentation
 
 | Document | Contents |
 |----------|----------|
 | [Architecture](docs/architecture.md) | System diagram, data flow, tech stack |
+| [Apollo Config Updater](docs/apollo-config-updater.md) | Remote config pull, env vars, payload format, tests |
 | [CI/CD](docs/ci-cd.md) | GitHub Actions workflow, path filters, local testing |
 | [Docker Strategy](docs/docker-strategy.md) | Two-image approach, build commands |
 | [Module Layout](docs/module-layout.md) | File naming conventions (no `mod.rs`) |

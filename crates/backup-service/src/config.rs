@@ -17,6 +17,12 @@ pub struct AppConfig {
     pub cached_list_limit: i64,
     /// Default list offset used for cache key (GET /backups first page).
     pub cached_list_offset: i64,
+    /// Apollo config updater: URL to fetch config from. If unset or empty, updater is disabled.
+    pub apollo_config_url: Option<String>,
+    /// Apollo config updater: seconds between fetch attempts.
+    pub apollo_poll_interval_secs: u64,
+    /// Apollo config updater: HTTP timeout for the config request (seconds).
+    pub apollo_timeout_secs: u64,
 }
 
 impl AppConfig {
@@ -59,6 +65,15 @@ impl AppConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
+            apollo_config_url: std::env::var("APOLLO_CONFIG_URL").ok().filter(|s| !s.is_empty()),
+            apollo_poll_interval_secs: std::env::var("APOLLO_POLL_INTERVAL_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(60),
+            apollo_timeout_secs: std::env::var("APOLLO_TIMEOUT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(10),
         })
     }
 }

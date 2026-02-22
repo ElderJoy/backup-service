@@ -24,10 +24,11 @@ Client ──────► Axum Router ──────┐       Tonic Serve
 
 | Module | Responsibility |
 |--------|---------------|
-| `main.rs` | Entry point — starts HTTP + gRPC servers, signal handling |
+| `main.rs` | Entry point — starts HTTP + gRPC servers, Apollo updater (if configured), signal handling |
 | `router.rs` | Route tree + middleware stack (auth, rate limit, CORS, compression, tracing) |
-| `config.rs` | `AppConfig` loaded from environment variables |
-| `state.rs` | `AppState` — shared state (DB pool, cache, rate limiter, AMQP channel) |
+| `config.rs` | `AppConfig` loaded from environment variables (incl. Apollo URL, poll interval, timeout) |
+| `state.rs` | `AppState` — shared state (DB pool, cache, config, rate limiter, AMQP channel) |
+| `apollo/` | Remote config updater: fetch from URL, merge into config, background loop |
 | `db.rs` | PostgreSQL connection pool + migration runner |
 | `cache.rs` | Redis caching layer with TTL, graceful degradation when Redis is down |
 | `errors.rs` | `AppError` enum → HTTP status codes (via `IntoResponse`) |
@@ -97,9 +98,21 @@ Applied in order (outermost first):
 | `metrics-exporter-prometheus` | `/metrics` endpoint |
 | `thiserror` / `anyhow` | Error types |
 
+## Configuration (environment)
+
+In addition to `DATABASE_URL`, `REDIS_URL`, `AMQP_URL`, `JWT_SECRET`, `LISTEN_ADDR`, `GRPC_LISTEN_ADDR`, and rate-limit/cache vars, the following enable optional remote config updates:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `APOLLO_CONFIG_URL` | URL to fetch config (GET). If set, a background task merges allowed fields into config. | — (disabled) |
+| `APOLLO_POLL_INTERVAL_SECS` | Seconds between fetches. | `60` |
+| `APOLLO_TIMEOUT_SECS` | HTTP timeout for config request. | `10` |
+
+See [Apollo Config Updater](../../docs/apollo-config-updater.md) for payload format and which fields are updated.
+
 ## Testing
 
-Integration tests in `tests/api_tests.rs` run the full HTTP lifecycle (auth → create → list → update → delete) against a real PostgreSQL database.
+Integration tests in `tests/api_tests.rs` run the full HTTP lifecycle (auth → create → list → update → delete) against a real PostgreSQL database. `tests/apollo_updater_tests.rs` tests the Apollo config updater with a mock HTTP server.
 
 ```bash
 cargo test -p backup-service --lib       # unit tests (no DB)

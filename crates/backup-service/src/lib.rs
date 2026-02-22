@@ -1,3 +1,4 @@
+pub mod apollo;
 pub mod cache;
 pub mod config;
 pub mod db;
