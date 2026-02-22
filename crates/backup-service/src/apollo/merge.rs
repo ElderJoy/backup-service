@@ -96,7 +96,10 @@ mod tests {
         let mut config = base_config();
         let original = config.clone();
         apply_update(&mut config, RemoteConfigUpdate::default());
-        assert_eq!(config.rate_limit.max_requests, original.rate_limit.max_requests);
+        assert_eq!(
+            config.rate_limit.max_requests,
+            original.rate_limit.max_requests
+        );
         assert_eq!(config.cache_ttl_secs, original.cache_ttl_secs);
         assert_eq!(config.cached_list_limit, original.cached_list_limit);
     }

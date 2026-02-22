@@ -6,7 +6,7 @@
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
 async fn setup_state() -> Option<backup_service::state::AppState> {
     dotenvy::dotenv().ok();

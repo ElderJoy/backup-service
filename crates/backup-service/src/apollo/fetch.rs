@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use crate::apollo::merge::{apply_update, RemoteConfigUpdate};
+use crate::apollo::merge::{RemoteConfigUpdate, apply_update};
 use crate::state::AppState;
 
 /// Config for the Apollo updater task.
@@ -48,11 +48,7 @@ pub async fn run_updater_loop(
 }
 
 /// Runs a single update cycle (for tests). Returns true if fetch and merge succeeded.
-pub async fn run_one_update(
-    client: &reqwest::Client,
-    url: &str,
-    state: &AppState,
-) -> bool {
+pub async fn run_one_update(client: &reqwest::Client, url: &str, state: &AppState) -> bool {
     match fetch_config(client, url).await {
         Ok(update) => {
             state.with_config_mut(|cfg| apply_update(cfg, update));

@@ -7,5 +7,5 @@
 mod fetch;
 mod merge;
 
-pub use fetch::{fetch_config, run_one_update, run_updater_loop, ApolloUpdaterConfig};
-pub use merge::{apply_update, RemoteConfigUpdate};
+pub use fetch::{ApolloUpdaterConfig, fetch_config, run_one_update, run_updater_loop};
+pub use merge::{RemoteConfigUpdate, apply_update};

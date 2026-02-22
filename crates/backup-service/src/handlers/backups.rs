@@ -92,7 +92,8 @@ pub async fn list_backups(
     let use_list_cache =
         params.status.is_none() && offset == cached_list_offset && limit == cached_list_limit;
     if use_list_cache {
-        if let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await {
+        if let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await
+        {
             return Ok(Json(ListResponse {
                 items: cached_items.into_iter().map(BackupResponse::from).collect(),
                 total,
@@ -159,7 +160,10 @@ pub async fn list_backups(
     };
 
     if use_list_cache {
-        state.cache.set_tenant_backups(claims.tenant_id, &backups, total).await;
+        state
+            .cache
+            .set_tenant_backups(claims.tenant_id, &backups, total)
+            .await;
     }
 
     Ok(Json(ListResponse {

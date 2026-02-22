@@ -167,7 +167,9 @@ mod tests {
         let cache = CacheLayer::noop();
         let backup = sample_backup(Uuid::nil(), Uuid::nil());
         cache.set_backup(&backup).await;
-        cache.set_tenant_backups(Uuid::nil(), &[backup.clone()], 1).await;
+        cache
+            .set_tenant_backups(Uuid::nil(), &[backup.clone()], 1)
+            .await;
         cache.invalidate_backup(backup.id).await;
         cache.invalidate_tenant_backups(backup.tenant_id).await;
     }
@@ -225,7 +227,9 @@ mod tests {
         cache.invalidate_backup(id).await;
         assert!(cache.get_backup(id).await.is_none());
 
-        cache.set_tenant_backups(tenant_id, &[backup.clone()], 1).await;
+        cache
+            .set_tenant_backups(tenant_id, &[backup.clone()], 1)
+            .await;
         let list = cache.get_tenant_backups(tenant_id).await;
         assert!(list.is_some());
         let (items, total) = list.unwrap();

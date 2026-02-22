@@ -65,7 +65,9 @@ impl AppConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
-            apollo_config_url: std::env::var("APOLLO_CONFIG_URL").ok().filter(|s| !s.is_empty()),
+            apollo_config_url: std::env::var("APOLLO_CONFIG_URL")
+                .ok()
+                .filter(|s| !s.is_empty()),
             apollo_poll_interval_secs: std::env::var("APOLLO_POLL_INTERVAL_SECS")
                 .ok()
                 .and_then(|v| v.parse().ok())

@@ -85,7 +85,11 @@ async fn main() -> anyhow::Result<()> {
                 interval,
                 timeout,
             };
-            tokio::spawn(apollo::run_updater_loop(state.clone(), updater_config, client));
+            tokio::spawn(apollo::run_updater_loop(
+                state.clone(),
+                updater_config,
+                client,
+            ));
             tracing::info!("Apollo config updater started");
         }
     }
