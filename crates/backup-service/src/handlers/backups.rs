@@ -76,6 +76,10 @@ pub async fn get_backup(
     Ok(Json(BackupResponse::from(backup)))
 }
 
+/// Default list params we cache (first page, no status filter).
+const CACHED_LIST_LIMIT: i64 = 20;
+const CACHED_LIST_OFFSET: i64 = 0;
+
 /// GET /api/v1/backups
 pub async fn list_backups(
     State(state): State<AppState>,
@@ -84,6 +88,18 @@ pub async fn list_backups(
 ) -> Result<Json<ListResponse<BackupResponse>>, AppError> {
     let limit = params.limit.clamp(1, 100);
     let offset = params.offset.max(0);
+
+    let use_list_cache = params.status.is_none() && offset == CACHED_LIST_OFFSET && limit == CACHED_LIST_LIMIT;
+    if use_list_cache {
+        if let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await {
+            return Ok(Json(ListResponse {
+                items: cached_items.into_iter().map(BackupResponse::from).collect(),
+                total,
+                offset,
+                limit,
+            }));
+        }
+    }
 
     let (backups, total): (Vec<Backup>, i64) = match &params.status {
         Some(status) => {
@@ -140,6 +156,10 @@ pub async fn list_backups(
             (items, count.0)
         }
     };
+
+    if use_list_cache {
+        state.cache.set_tenant_backups(claims.tenant_id, &backups, total).await;
+    }
 
     Ok(Json(ListResponse {
         items: backups.into_iter().map(BackupResponse::from).collect(),
