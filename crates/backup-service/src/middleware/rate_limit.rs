@@ -2,7 +2,7 @@
 //!
 //! Falls back to an in-memory `Arc<Mutex<HashMap>>` when Redis is unavailable.
 
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -12,6 +12,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::models::Claims;
+use crate::state::AppState;
 
 /// Configuration for the rate limiter.
 #[derive(Debug, Clone)]
@@ -79,18 +80,13 @@ pub struct RateLimitInfo {
 /// Axum middleware that enforces per-tenant rate limits.
 ///
 /// Must be applied AFTER auth middleware (requires `Claims` in extensions).
-pub async fn rate_limit_middleware(request: Request, next: Next) -> Result<Response, Response> {
-    let config = request
-        .extensions()
-        .get::<RateLimitConfig>()
-        .cloned()
-        .unwrap_or_default();
-
-    let limiter = request
-        .extensions()
-        .get::<InMemoryRateLimiter>()
-        .cloned()
-        .unwrap_or_default();
+pub async fn rate_limit_middleware(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Result<Response, Response> {
+    let config = state.config.read().unwrap().rate_limit.clone();
+    let limiter = state.rate_limiter.clone();
 
     // Extract tenant from JWT claims (set by auth middleware)
     let tenant_id = request.extensions().get::<Claims>().map(|c| c.tenant_id);

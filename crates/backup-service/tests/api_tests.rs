@@ -48,9 +48,7 @@ async fn setup() -> Option<axum_test::TestServer> {
         db: Arc::new(pool),
         cache: backup_service::cache::CacheLayer::noop(),
         config: config_arc,
-        jwt_secret: "test-secret".to_string(),
         rate_limiter: backup_service::middleware::rate_limit::InMemoryRateLimiter::default(),
-        rate_limit_config: backup_service::middleware::rate_limit::RateLimitConfig::default(),
         amqp_channel: None,
     };
 

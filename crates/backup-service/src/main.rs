@@ -55,24 +55,18 @@ async fn main() -> anyhow::Result<()> {
         .install_recorder()
         .expect("failed to install Prometheus recorder");
 
-    // Application state
-    let jwt_secret = config_arc.read().unwrap().jwt_secret.clone();
-    let rate_limit_config = config_arc.read().unwrap().rate_limit.clone();
-    let grpc_addr = config_arc.read().unwrap().grpc_addr;
-    let listen_addr = config_arc.read().unwrap().listen_addr;
-
+    // Application state (jwt and rate_limit read from config in-place by middleware/handlers)
     let db_arc = Arc::new(pool);
     let state = AppState {
         db: db_arc.clone(),
         cache,
         config: config_arc.clone(),
-        jwt_secret,
         rate_limiter: InMemoryRateLimiter::default(),
-        rate_limit_config,
         amqp_channel,
     };
 
     // gRPC server — accepts result reports from backup-worker
+    let grpc_addr = config_arc.read().unwrap().grpc_addr;
     let grpc_db = db_arc.clone();
     let (grpc_shutdown_tx, grpc_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     let grpc_handle = tokio::spawn(async move {
@@ -95,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
         axum::routing::get(move || async move { metrics_handle.render() }),
     );
 
+    let listen_addr = config_arc.read().unwrap().listen_addr;
     let listener = tokio::net::TcpListener::bind(listen_addr).await?;
     tracing::info!("HTTP server listening on {}", listen_addr);
 

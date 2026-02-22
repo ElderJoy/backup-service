@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-use axum::{Extension, Router, middleware};
+use axum::{Router, middleware};
 use std::time::Duration;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
@@ -9,12 +9,12 @@ use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{auth, backups, health};
-use crate::middleware::auth::{JwtSecret, auth_middleware};
+use crate::middleware::auth::auth_middleware;
 use crate::middleware::rate_limit::rate_limit_middleware;
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
-    // Protected routes — require valid JWT, rate limited per tenant
+    // Protected routes — require valid JWT, rate limited per tenant (config read from state.config)
     let protected = Router::new()
         .route(
             "/api/v1/backups",
@@ -34,11 +34,14 @@ pub fn create_router(state: AppState) -> Router {
             "/api/v1/backups/{id}/process",
             post(backups::enqueue_backup),
         )
-        .layer(middleware::from_fn(rate_limit_middleware))
-        .layer(Extension(state.rate_limiter.clone()))
-        .layer(Extension(state.rate_limit_config.clone()))
-        .layer(middleware::from_fn(auth_middleware))
-        .layer(Extension(JwtSecret(state.jwt_secret.clone())));
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ));
 
     // Public routes — no auth required
     let public = Router::new()

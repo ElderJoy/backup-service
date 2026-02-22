@@ -1,4 +1,4 @@
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
 use chrono::{Duration, Utc};
@@ -6,6 +6,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode}
 
 use crate::errors::AppError;
 use crate::models::Claims;
+use crate::state::AppState;
 
 /// Create a signed JWT for the given user.
 pub fn create_token(
@@ -44,12 +45,16 @@ pub fn verify_token(token: &str, secret: &str) -> Result<Claims, AppError> {
 
 /// Axum middleware that extracts and validates the Bearer token,
 /// storing the resulting `Claims` in request extensions.
-pub async fn auth_middleware(mut request: Request, next: Next) -> Result<Response, AppError> {
-    let secret = request
-        .extensions()
-        .get::<JwtSecret>()
-        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("JWT secret not configured")))?
-        .0
+pub async fn auth_middleware(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let secret = state
+        .config
+        .read()
+        .map_err(|_| AppError::Internal(anyhow::anyhow!("config lock poisoned")))?
+        .jwt_secret
         .clone();
 
     let token = request
@@ -64,7 +69,3 @@ pub async fn auth_middleware(mut request: Request, next: Next) -> Result<Respons
     request.extensions_mut().insert(claims);
     Ok(next.run(request).await)
 }
-
-/// Wrapper so we can store the JWT secret in request extensions.
-#[derive(Debug, Clone)]
-pub struct JwtSecret(pub String);
