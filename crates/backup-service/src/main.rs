@@ -57,13 +57,13 @@ async fn main() -> anyhow::Result<()> {
 
     // Application state (jwt and rate_limit read from config in-place by middleware/handlers)
     let db_arc = Arc::new(pool);
-    let state = AppState {
-        db: db_arc.clone(),
+    let state = AppState::new(
+        db_arc.clone(),
         cache,
-        config: config_arc.clone(),
-        rate_limiter: InMemoryRateLimiter::default(),
+        config_arc.clone(),
+        InMemoryRateLimiter::default(),
         amqp_channel,
-    };
+    );
 
     // gRPC server — accepts result reports from backup-worker
     let grpc_addr = config_arc.read().unwrap().grpc_addr;

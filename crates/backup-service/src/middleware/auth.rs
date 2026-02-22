@@ -50,12 +50,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let secret = state
-        .config
-        .read()
-        .map_err(|_| AppError::Internal(anyhow::anyhow!("config lock poisoned")))?
-        .jwt_secret
-        .clone();
+    let secret = state.config().jwt_secret.clone();
 
     let token = request
         .headers()

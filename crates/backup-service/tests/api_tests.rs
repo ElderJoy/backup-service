@@ -44,13 +44,13 @@ async fn setup() -> Option<axum_test::TestServer> {
     };
     let config_arc = Arc::new(RwLock::new(test_config));
 
-    let state = backup_service::state::AppState {
-        db: Arc::new(pool),
-        cache: backup_service::cache::CacheLayer::noop(),
-        config: config_arc,
-        rate_limiter: backup_service::middleware::rate_limit::InMemoryRateLimiter::default(),
-        amqp_channel: None,
-    };
+    let state = backup_service::state::AppState::new(
+        Arc::new(pool),
+        backup_service::cache::CacheLayer::noop(),
+        config_arc,
+        backup_service::middleware::rate_limit::InMemoryRateLimiter::default(),
+        None,
+    );
 
     let app = backup_service::router::create_router(state);
     axum_test::TestServer::new(app).ok()

@@ -85,7 +85,7 @@ pub async fn rate_limit_middleware(
     request: Request,
     next: Next,
 ) -> Result<Response, Response> {
-    let config = state.config.read().unwrap().rate_limit.clone();
+    let config = state.config().rate_limit.clone();
     let limiter = state.rate_limiter.clone();
 
     // Extract tenant from JWT claims (set by auth middleware)

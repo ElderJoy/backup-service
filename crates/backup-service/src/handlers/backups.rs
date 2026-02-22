@@ -86,7 +86,7 @@ pub async fn list_backups(
     let offset = params.offset.max(0);
 
     let (cached_list_limit, cached_list_offset) = {
-        let cfg = state.config.read().unwrap();
+        let cfg = state.config();
         (cfg.cached_list_limit, cfg.cached_list_offset)
     };
     let use_list_cache =

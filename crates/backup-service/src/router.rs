@@ -14,7 +14,7 @@ use crate::middleware::rate_limit::rate_limit_middleware;
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
-    // Protected routes — require valid JWT, rate limited per tenant (config read from state.config)
+    // Protected routes — require valid JWT, rate limited per tenant (config via state.config())
     let protected = Router::new()
         .route(
             "/api/v1/backups",

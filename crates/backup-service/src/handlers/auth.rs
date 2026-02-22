@@ -39,7 +39,7 @@ pub async fn login(
         _ => return Err(AppError::Unauthorized("invalid credentials".into())),
     };
 
-    let jwt_secret = state.config.read().unwrap().jwt_secret.clone();
+    let jwt_secret = state.config().jwt_secret.clone();
     let token = auth::create_token(&req.username, tenant_id, roles, &jwt_secret)?;
 
     Ok(Json(LoginResponse {
