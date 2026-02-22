@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use tokio::signal;
 
@@ -18,22 +18,28 @@ async fn main() -> anyhow::Result<()> {
     let otel_provider = telemetry::init_telemetry("backup-service");
 
     let config = AppConfig::from_env()?;
-    tracing::info!(
-        http = %config.listen_addr,
-        grpc = %config.grpc_addr,
-        "Starting backup-service"
-    );
+    let config_arc = Arc::new(RwLock::new(config));
+    {
+        let cfg = config_arc.read().unwrap();
+        tracing::info!(
+            http = %cfg.listen_addr,
+            grpc = %cfg.grpc_addr,
+            "Starting backup-service"
+        );
+    }
 
     // Database
-    let pool = db::create_pool(&config.database_url).await?;
+    let db_url = config_arc.read().unwrap().database_url.clone();
+    let pool = db::create_pool(&db_url).await?;
     db::run_migrations(&pool).await?;
     tracing::info!("Database connected and migrations applied");
 
-    // Redis cache (gracefully degrades if unavailable)
-    let cache = CacheLayer::new(&config.redis_url).await;
+    // Redis cache (gracefully degrades if unavailable); holds config Arc for dynamic TTL
+    let cache = CacheLayer::new(config_arc.clone()).await;
 
     // RabbitMQ — used only for publishing jobs (worker is a separate process)
-    let (amqp_conn, amqp_channel) = match worker::connect_rabbitmq(&config.amqp_url).await {
+    let amqp_url = config_arc.read().unwrap().amqp_url.clone();
+    let (amqp_conn, amqp_channel) = match worker::connect_rabbitmq(&amqp_url).await {
         Ok((conn, ch)) => {
             tracing::info!("RabbitMQ connected");
             (Some(conn), Some(Arc::new(ch)))
@@ -50,18 +56,23 @@ async fn main() -> anyhow::Result<()> {
         .expect("failed to install Prometheus recorder");
 
     // Application state
+    let jwt_secret = config_arc.read().unwrap().jwt_secret.clone();
+    let rate_limit_config = config_arc.read().unwrap().rate_limit.clone();
+    let grpc_addr = config_arc.read().unwrap().grpc_addr;
+    let listen_addr = config_arc.read().unwrap().listen_addr;
+
     let db_arc = Arc::new(pool);
     let state = AppState {
         db: db_arc.clone(),
         cache,
-        jwt_secret: config.jwt_secret.clone(),
+        config: config_arc.clone(),
+        jwt_secret,
         rate_limiter: InMemoryRateLimiter::default(),
-        rate_limit_config: config.rate_limit.clone(),
+        rate_limit_config,
         amqp_channel,
     };
 
     // gRPC server — accepts result reports from backup-worker
-    let grpc_addr = config.grpc_addr;
     let grpc_db = db_arc.clone();
     let (grpc_shutdown_tx, grpc_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     let grpc_handle = tokio::spawn(async move {
@@ -84,8 +95,8 @@ async fn main() -> anyhow::Result<()> {
         axum::routing::get(move || async move { metrics_handle.render() }),
     );
 
-    let listener = tokio::net::TcpListener::bind(config.listen_addr).await?;
-    tracing::info!("HTTP server listening on {}", config.listen_addr);
+    let listener = tokio::net::TcpListener::bind(listen_addr).await?;
+    tracing::info!("HTTP server listening on {}", listen_addr);
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

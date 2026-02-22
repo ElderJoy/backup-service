@@ -1,38 +1,61 @@
+use std::sync::{Arc, RwLock};
+
 use redis::AsyncCommands;
 use uuid::Uuid;
 
+use crate::config::AppConfig;
 use crate::models::Backup;
 
+const DEFAULT_CACHE_TTL_SECS: u64 = 300;
+
 /// Redis-backed caching layer with typed get/set operations.
+/// Holds an optional config Arc for dynamic TTL (when None, e.g. in noop(), uses default TTL).
 #[derive(Clone)]
 pub struct CacheLayer {
     redis: Option<redis::aio::ConnectionManager>,
+    config: Option<Arc<RwLock<AppConfig>>>,
 }
 
 impl CacheLayer {
-    pub async fn new(redis_url: &str) -> Self {
-        match redis::Client::open(redis_url) {
+    /// Create cache using Redis URL and TTL from config. Stores config Arc for dynamic TTL updates.
+    pub async fn new(config: Arc<RwLock<AppConfig>>) -> Self {
+        let redis_url = config.read().unwrap().redis_url.clone();
+        let redis = match redis::Client::open(redis_url.as_str()) {
             Ok(client) => match client.get_connection_manager().await {
                 Ok(conn) => {
                     tracing::info!("Redis cache connected");
-                    Self { redis: Some(conn) }
+                    Some(conn)
                 }
                 Err(e) => {
                     tracing::warn!(error = %e, "Redis unavailable, caching disabled");
-                    Self { redis: None }
+                    None
                 }
             },
             Err(e) => {
                 tracing::warn!(error = %e, "Invalid Redis URL, caching disabled");
-                Self { redis: None }
+                None
             }
+        };
+        Self {
+            redis,
+            config: Some(config),
         }
     }
 
     /// Create a no-op cache (for testing or when Redis is unavailable).
     #[allow(dead_code)]
     pub fn noop() -> Self {
-        Self { redis: None }
+        Self {
+            redis: None,
+            config: None,
+        }
+    }
+
+    fn cache_ttl_secs(&self) -> u64 {
+        self.config
+            .as_ref()
+            .and_then(|c| c.read().ok().map(|g| g.cache_ttl_secs))
+            .unwrap_or(DEFAULT_CACHE_TTL_SECS)
     }
 
     pub async fn ping(&self) -> bool {
@@ -56,9 +79,10 @@ impl CacheLayer {
         let Some(mut conn) = self.redis.clone() else {
             return;
         };
+        let ttl = self.cache_ttl_secs();
         let key = format!("backup:{}", backup.id);
         if let Ok(json) = serde_json::to_string(backup) {
-            let _: Result<(), _> = conn.set_ex(&key, &json, 300).await; // 5 min TTL
+            let _: Result<(), _> = conn.set_ex(&key, &json, ttl).await;
         }
     }
 
@@ -83,10 +107,11 @@ impl CacheLayer {
         let Some(mut conn) = self.redis.clone() else {
             return;
         };
+        let ttl = self.cache_ttl_secs();
         let key = format!("tenant_backups:{tenant_id}");
         let payload = (items, total);
         if let Ok(json) = serde_json::to_string(&payload) {
-            let _: Result<(), _> = conn.set_ex(&key, &json, 300).await; // 5 min TTL
+            let _: Result<(), _> = conn.set_ex(&key, &json, ttl).await;
         }
     }
 
@@ -149,10 +174,28 @@ mod tests {
 
     #[tokio::test]
     async fn redis_roundtrip_when_available() {
+        use std::sync::{Arc, RwLock};
+
+        use crate::config::AppConfig;
+        use crate::middleware::rate_limit::RateLimitConfig;
+
         let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".into());
+        let config = AppConfig {
+            database_url: String::new(),
+            redis_url: url.clone(),
+            amqp_url: String::new(),
+            jwt_secret: String::new(),
+            listen_addr: "0.0.0.0:0".parse().unwrap(),
+            grpc_addr: "0.0.0.0:0".parse().unwrap(),
+            rate_limit: RateLimitConfig::default(),
+            cache_ttl_secs: 300,
+            cached_list_limit: 20,
+            cached_list_offset: 0,
+        };
+        let config_arc = Arc::new(RwLock::new(config));
         let cache = match tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            CacheLayer::new(&url),
+            CacheLayer::new(config_arc),
         )
         .await
         {

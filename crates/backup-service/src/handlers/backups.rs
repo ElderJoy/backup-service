@@ -76,10 +76,6 @@ pub async fn get_backup(
     Ok(Json(BackupResponse::from(backup)))
 }
 
-/// Default list params we cache (first page, no status filter).
-const CACHED_LIST_LIMIT: i64 = 20;
-const CACHED_LIST_OFFSET: i64 = 0;
-
 /// GET /api/v1/backups
 pub async fn list_backups(
     State(state): State<AppState>,
@@ -89,7 +85,12 @@ pub async fn list_backups(
     let limit = params.limit.clamp(1, 100);
     let offset = params.offset.max(0);
 
-    let use_list_cache = params.status.is_none() && offset == CACHED_LIST_OFFSET && limit == CACHED_LIST_LIMIT;
+    let (cached_list_limit, cached_list_offset) = {
+        let cfg = state.config.read().unwrap();
+        (cfg.cached_list_limit, cfg.cached_list_offset)
+    };
+    let use_list_cache =
+        params.status.is_none() && offset == cached_list_offset && limit == cached_list_limit;
     if use_list_cache {
         if let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await {
             return Ok(Json(ListResponse {

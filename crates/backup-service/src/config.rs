@@ -11,6 +11,12 @@ pub struct AppConfig {
     pub listen_addr: SocketAddr,
     pub grpc_addr: SocketAddr,
     pub rate_limit: RateLimitConfig,
+    /// Redis cache TTL for backup and list entries (seconds).
+    pub cache_ttl_secs: u64,
+    /// Default list limit used for cache key (GET /backups first page).
+    pub cached_list_limit: i64,
+    /// Default list offset used for cache key (GET /backups first page).
+    pub cached_list_offset: i64,
 }
 
 impl AppConfig {
@@ -41,6 +47,18 @@ impl AppConfig {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(60),
             },
+            cache_ttl_secs: std::env::var("CACHE_TTL_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(300),
+            cached_list_limit: std::env::var("CACHED_LIST_LIMIT")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(20),
+            cached_list_offset: std::env::var("CACHED_LIST_OFFSET")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
         })
     }
 }

@@ -8,7 +8,7 @@
 use axum::http::StatusCode;
 use axum::http::header::{HeaderName, HeaderValue};
 use serde_json::{Value, json};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 // Helper: build a test app with real database (if available) or skip
 async fn setup() -> Option<axum_test::TestServer> {
@@ -30,9 +30,24 @@ async fn setup() -> Option<axum_test::TestServer> {
         .await
         .ok()?;
 
+    let test_config = backup_service::config::AppConfig {
+        database_url: String::new(),
+        redis_url: String::new(),
+        amqp_url: String::new(),
+        jwt_secret: "test-secret".to_string(),
+        listen_addr: "0.0.0.0:0".parse().unwrap(),
+        grpc_addr: "0.0.0.0:0".parse().unwrap(),
+        rate_limit: backup_service::middleware::rate_limit::RateLimitConfig::default(),
+        cache_ttl_secs: 300,
+        cached_list_limit: 20,
+        cached_list_offset: 0,
+    };
+    let config_arc = Arc::new(RwLock::new(test_config));
+
     let state = backup_service::state::AppState {
         db: Arc::new(pool),
         cache: backup_service::cache::CacheLayer::noop(),
+        config: config_arc,
         jwt_secret: "test-secret".to_string(),
         rate_limiter: backup_service::middleware::rate_limit::InMemoryRateLimiter::default(),
         rate_limit_config: backup_service::middleware::rate_limit::RateLimitConfig::default(),
