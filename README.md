@@ -86,6 +86,16 @@ cargo fmt --all -- --check
 
 CI runs these automatically — see [docs/ci-cd.md](docs/ci-cd.md).
 
+### Git hooks
+
+To auto-format Rust code before each commit (so `cargo fmt --check` in CI passes), enable the pre-commit hook once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Hooks live in [.githooks/](.githooks/); the pre-commit hook runs `cargo fmt --all` and re-stages any changed files.
+
 ## Deployment
 
 <details>
