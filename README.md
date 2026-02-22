@@ -88,13 +88,13 @@ CI runs these automatically — see [docs/ci-cd.md](docs/ci-cd.md).
 
 ### Git hooks
 
-To auto-format Rust code before each commit (so `cargo fmt --check` in CI passes), enable the pre-commit hook once:
+To match CI before each commit (format + clippy), enable the pre-commit hook once:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Hooks live in [.githooks/](.githooks/); the pre-commit hook runs `cargo fmt --all` and re-stages any changed files.
+The hook in [.githooks/](.githooks/) runs `cargo fmt --all` (re-staging changes), then `cargo clippy --workspace --all-targets -- -D warnings`. The commit is aborted if clippy fails.
 
 ## Deployment
 

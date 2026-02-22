@@ -228,7 +228,7 @@ mod tests {
         assert!(cache.get_backup(id).await.is_none());
 
         cache
-            .set_tenant_backups(tenant_id, &[backup.clone()], 1)
+            .set_tenant_backups(tenant_id, std::slice::from_ref(&backup), 1)
             .await;
         let list = cache.get_tenant_backups(tenant_id).await;
         assert!(list.is_some());

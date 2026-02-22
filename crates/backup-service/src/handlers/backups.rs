@@ -91,16 +91,15 @@ pub async fn list_backups(
     };
     let use_list_cache =
         params.status.is_none() && offset == cached_list_offset && limit == cached_list_limit;
-    if use_list_cache {
-        if let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await
-        {
-            return Ok(Json(ListResponse {
-                items: cached_items.into_iter().map(BackupResponse::from).collect(),
-                total,
-                offset,
-                limit,
-            }));
-        }
+    if use_list_cache
+        && let Some((cached_items, total)) = state.cache.get_tenant_backups(claims.tenant_id).await
+    {
+        return Ok(Json(ListResponse {
+            items: cached_items.into_iter().map(BackupResponse::from).collect(),
+            total,
+            offset,
+            limit,
+        }));
     }
 
     let (backups, total): (Vec<Backup>, i64) = match &params.status {
